@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smartbook</title>
+    <style>
+        {{STYLES}}
+    </style>
+</head>
+<body>
+    <!-- PAGE 1: COUVERTURE -->
+    <div class="page">
+        <!-- Bande verticale gauche avec dégradé -->
+        <div class="left-gradient"></div>
+
+        <!-- Image de couverture -->
+        <div class="cover-image-zone">
+            <img src="{{COVER_IMAGE}}" alt="Image de couverture">
+        </div>
+
+        <!-- Titre et sous-titre -->
+        <div class="cover-text-container">
+            <div class="cover-title">{{TITLE}}</div>
+            <div class="cover-subtitle">{{SUBTITLE}}</div>
+        </div>
+
+        <!-- Ligne horizontale colorée -->
+        <div class="cover-category-line"></div>
+
+        <!-- Label de catégorie -->
+        <div class="cover-category-label">{{CATEGORY_LABEL}}</div>
+
+        <!-- Logo Smartbook -->
+        <div class="cover-logo">
+            <img src="{{LOGO_IMAGE}}" alt="Smartbook">
+        </div>
+    </div>
+
+    <!-- PAGE 2: LICENCE -->
+    <div class="page">
+        <!-- Bande verticale gauche avec dégradé -->
+        <div class="left-gradient"></div>
+
+        <!-- Filigrane Encyclo-AI (logo oblique) -->
+        <div class="license-watermark">
+            <img src="{{WATERMARK_IMAGE}}" alt="Encyclo-AI">
+        </div>
+
+        <!-- Conteneur du texte de licence -->
+        <div class="license-container">
+            {{LICENSE_TEXT}}
+
+            <div class="creation-date">
+                {{CREATION_DATE}}
+            </div>
+        </div>
+
+        <!-- Ligne horizontale -->
+        <div class="license-separator-line"></div>
+
+        <!-- URL -->
+        <div class="website-url">www.encyclo-ai.com</div>
+
+        <!-- Logo Smartbook -->
+        <div class="license-logo">
+            <img src="{{LOGO_IMAGE}}" alt="Smartbook">
+        </div>
+    </div>
+</body>
+</html>

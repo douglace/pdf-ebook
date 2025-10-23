@@ -52,18 +52,6 @@ class PdfGenerator
         }
     }
 
-    /**
-     * Générer le PDF de la couverture
-     *
-     * @param string $html Le HTML de la couverture
-     * @param string $ebookId L'ID de l'ebook
-     * @return string Le chemin du PDF généré
-     */
-    public function generateCover(string $html, string $ebookId): string
-    {
-        $filename = 'cover_' . $ebookId;
-        return $this->generateFromHtml($html, $filename);
-    }
 
     /**
      * Obtenir le chemin du dossier output

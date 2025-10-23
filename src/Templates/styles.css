@@ -1,0 +1,231 @@
+@font-face {
+    font-family: 'Quicksand';
+    src: url('{{FONT_REGULAR}}') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('{{FONT_BOLD}}') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* Page wrapper pour forcer le saut de page */
+.page {
+    width: 210mm;
+    height: 297mm;
+    position: relative;
+    background: white;
+    overflow: hidden;
+    page-break-after: always;
+}
+
+.page:last-child {
+    page-break-after: auto;
+}
+
+/* ===== STYLES COMMUNS ===== */
+
+/* Bande verticale gauche avec dégradé */
+.left-gradient {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 50px;
+    height: 100%;
+    background: url('{{DEGRADE_IMAGE}}') no-repeat;
+    background-size: 50px 100%;
+    background-position: left top;
+}
+
+/* ===== PAGE COUVERTURE ===== */
+
+/* Zone de l'image de couverture */
+.cover-image-zone {
+    position: absolute;
+    right: 60px;
+    top: 150px;
+    width: 550px;
+    height: 300px;
+}
+
+.cover-image-zone img {
+    width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+}
+
+/* Conteneur du texte de couverture */
+.cover-text-container {
+    position: absolute;
+    left: 70px;
+    right: 70px;
+    top: 680px;
+}
+
+/* Titre de couverture */
+.cover-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: bold;
+    font-size: 42px;
+    line-height: 1.2;
+    color: rgb(30, 30, 30);
+    text-align: left;
+    word-wrap: break-word;
+    text-transform: uppercase;
+}
+
+/* Sous-titre de couverture */
+.cover-subtitle {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: normal;
+    font-size: 24px;
+    line-height: 1.4;
+    color: rgb(120, 120, 120);
+    text-align: left;
+    word-wrap: break-word;
+    margin-top: 70px;
+    text-transform: uppercase;
+}
+
+/* Ligne horizontale colorée de couverture */
+.cover-category-line {
+    position: absolute;
+    left: 70px;
+    bottom: 150px;
+    right: 30px;
+    height: 3px;
+    background-color: {{CATEGORY_COLOR}};
+}
+
+/* Label de catégorie */
+.cover-category-label {
+    position: absolute;
+    left: 70px;
+    bottom: 100px;
+    font-family: 'Quicksand', sans-serif;
+    font-size: 20px;
+    color: rgb(30, 30, 30);
+}
+
+/* Logo Smartbook de couverture */
+.cover-logo {
+    position: absolute;
+    right: 30px;
+    bottom: 70px;
+    width: 150px;
+    height: 70px;
+}
+
+.cover-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===== PAGE LICENCE ===== */
+
+/* Filigrane Encyclo-AI (logo oblique) */
+.license-watermark {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    opacity: 0.08;
+    width: 600px;
+    height: auto;
+    z-index: 1;
+}
+
+.license-watermark img {
+    width: 100%;
+    height: auto;
+}
+
+/* Conteneur du texte de licence */
+.license-container {
+    position: absolute;
+    left: 120px;
+    right: 80px;
+    bottom: 180px;
+    z-index: 2;
+}
+
+.license-text {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: normal;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: rgb(50, 50, 50);
+    text-align: justify;
+    margin-bottom: 10px;
+}
+
+/* Date de création */
+.creation-date {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: normal;
+    font-size: 10pt;
+    color: rgb(50, 50, 50);
+    text-align: center;
+    margin-top: 15px;
+}
+
+/* Ligne horizontale de licence */
+.license-separator-line {
+    position: absolute;
+    left: 150px;
+    right: 80px;
+    bottom: 110px;
+    height: 5px;
+    background-color: rgb(0, 0, 0);
+    z-index: 2;
+}
+
+/* Logo Smartbook de licence */
+.license-logo {
+    position: absolute;
+    right: 30px;
+    bottom: 70px;
+    width: 150px;
+    height: 70px;
+    z-index: 2;
+}
+
+.license-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* URL */
+.website-url {
+    position: absolute;
+    left: 70px;
+    bottom: 60px;
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12pt;
+    color: rgb(30, 30, 30);
+    z-index: 2;
+}
