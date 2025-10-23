@@ -1,0 +1,17 @@
+{
+    "name": "vex6/phppdf",
+    "autoload": {
+        "psr-4": {
+            "Vex6\\Phppdf\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dilios Team Dev - DK",
+            "email": "31247228+douglace@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "spatie/browsershot": "^5.0"
+    }
+}
