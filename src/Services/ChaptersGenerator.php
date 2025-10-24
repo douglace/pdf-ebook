@@ -88,13 +88,13 @@ class ChaptersGenerator
         $currentPageHtml = '';
         $currentPageContentLength = 0;
 
-        // Capacité estimée par page (en caractères)
+        // Capacité estimée par page (en caractères) - Optimisé pour mieux remplir les pages
         // Première page d'un chapitre a le titre (H1), donc moins d'espace
-        $maxLengthFirstPageChapter = 2000;  // ~2000 caractères
-        $maxLengthNormalPage = 3500;  // ~3500 caractères pour les pages suivantes
+        $maxLengthFirstPageChapter = 2800;  // ~2800 caractères (augmenté)
+        $maxLengthNormalPage = 4200;  // ~4200 caractères pour les pages suivantes (augmenté)
 
-        // Marge de sécurité
-        $safetyMargin = 0.85;
+        // Marge de sécurité réduite pour mieux utiliser l'espace
+        $safetyMargin = 0.95;
 
         $isFirstPageOfChapter = true;
 
@@ -114,7 +114,8 @@ class ChaptersGenerator
             // Commencer une nouvelle page avec le titre du chapitre
             $isFirstPageOfChapter = true;
             $currentPageHtml .= '<div class="chapter-container page-container">';
-            $currentPageHtml .= '<h1 class="chapter-title page-title">' . $chapterNumber . '. ' . $chapterTitle . '</h1>';
+            $anchorId = 'chapter-' . $chapterNumber;
+            $currentPageHtml .= '<h1 id="' . $anchorId . '" class="chapter-title page-title">' . $chapterNumber . '. ' . $chapterTitle . '</h1>';
             $currentPageContentLength += strlen($chapterTitle);
 
             // Traiter les sous-chapitres
@@ -133,26 +134,45 @@ class ChaptersGenerator
                 $effectiveMaxLength = $maxLength * $safetyMargin;
 
                 // Vérifier si on doit créer une nouvelle page
+                // Permettre aux paragraphes de continuer sur la page suivante
                 if ($currentPageContentLength > 0 && ($currentPageContentLength + $subchapterContentLength) > $effectiveMaxLength) {
-                    // Sauvegarder la page actuelle
-                    $currentPageHtml .= '</div>'; // Close chapter-container
-                    $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
+                    // Si c'est un sous-chapitre complet qui ne rentre pas, créer une nouvelle page
+                    if ($subchapterContentLength > ($effectiveMaxLength * 0.3)) {
+                        // Sauvegarder la page actuelle
+                        $currentPageHtml .= '</div>'; // Close chapter-container
+                        $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
 
-                    // Démarrer une nouvelle page
-                    $currentPageHtml = '<div class="chapter-container page-container">';
-                    $currentPageContentLength = 0;
-                    $isFirstPageOfChapter = false;
+                        // Démarrer une nouvelle page
+                        $currentPageHtml = '<div class="chapter-container page-container">';
+                        $currentPageContentLength = 0;
+                        $isFirstPageOfChapter = false;
+                    }
                 }
 
-                // Ajouter le sous-chapitre
-                $currentPageHtml .= '<h2 class="subchapter-title">' . $subchapterNumber . ' ' . $subchapterTitle . '</h2>';
+                // Ajouter le sous-chapitre avec ancre
+                $subchapterAnchorId = 'chapter-' . $chapterNumber . '-subchapter-' . $subchapterNumber;
+                $currentPageHtml .= '<h2 id="' . $subchapterAnchorId . '" class="subchapter-title">' . $subchapterNumber . ' ' . $subchapterTitle . '</h2>';
                 $currentPageContentLength += strlen($subchapterTitle);
 
-                // Ajouter les paragraphes
+                // Ajouter les paragraphes avec gestion des sauts de page
                 foreach ($subchapter['paragraphs'] as $paragraph) {
+                    $paragraphLength = strlen($paragraph);
+                    
+                    // Vérifier si le paragraphe rentre sur la page actuelle
+                    if ($currentPageContentLength + $paragraphLength > $effectiveMaxLength && $currentPageContentLength > 0) {
+                        // Le paragraphe ne rentre pas, créer une nouvelle page
+                        $currentPageHtml .= '</div>'; // Close chapter-container
+                        $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
+
+                        // Démarrer une nouvelle page
+                        $currentPageHtml = '<div class="chapter-container page-container">';
+                        $currentPageContentLength = 0;
+                        $isFirstPageOfChapter = false;
+                    }
+                    
                     $paragraphHtml = htmlspecialchars($paragraph, ENT_QUOTES, 'UTF-8');
                     $currentPageHtml .= '<p class="chapter-paragraph">' . $paragraphHtml . '</p>';
-                    $currentPageContentLength += strlen($paragraph);
+                    $currentPageContentLength += $paragraphLength;
                 }
             }
         }

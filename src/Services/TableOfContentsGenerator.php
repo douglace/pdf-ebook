@@ -170,14 +170,17 @@ class TableOfContentsGenerator
                     continue;
                 }
                 
-                $this->addEntry($chapterTitle, 'TITRE1', $currentPage);
+                $anchorId = 'chapter-' . $chapterNumber;
+                $this->addEntry($chapterTitle, 'TITRE1', $currentPage, $anchorId);
                 $currentPage++;
                 
                 // Ajouter les sous-chapitres
                 if (isset($chapter['subchapter'])) {
                     foreach ($chapter['subchapter'] as $subchapter) {
                         $subchapterTitle = $subchapter['subchapter'] ?? '';
-                        $this->addEntry($subchapterTitle, 'TITRE2', $currentPage);
+                        $subchapterNumber = $subchapter['numero_subchapter'] ?? '';
+                        $subchapterAnchorId = 'chapter-' . $chapterNumber . '-subchapter-' . $subchapterNumber;
+                        $this->addEntry($subchapterTitle, 'TITRE2', $currentPage, $subchapterAnchorId);
                     }
                 }
             }

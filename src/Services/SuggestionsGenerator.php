@@ -139,9 +139,8 @@ class SuggestionsGenerator
             ? "To delve deeper into the subject, we suggest using Encyclo-AI to create the following Smartbooks. The proposed title and summary can be used to configure the generation of a new Smartbook by Encyclo-AI."
             : "Pour approfondir le sujet, nous vous suggérons d'utiliser Encyclo-AI pour créer les Smartbooks suivants. Le titre et la synthèse proposés pourront être utilisés pour configurer la génération d'un nouveau Smartbook par Encyclo-AI.";
 
-        $html = '<a id="suggestions" name="suggestions"></a>';
-        $html .= '<div class="suggestions-container page-container">';
-        $html .= '<h1 class="suggestions-title page-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
+        $html = '<div class="suggestions-container page-container">';
+        $html .= '<h1 id="suggestions" class="suggestions-title page-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
         $html .= '<div class="suggestions-introduction">';
         $html .= '<p>' . htmlspecialchars($introText, ENT_QUOTES, 'UTF-8') . '</p>';
         $html .= '</div>';
