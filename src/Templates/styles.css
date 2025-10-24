@@ -532,6 +532,59 @@ html, body {
     line-height: 1.6;
 }
 
+/* ===== PAGE GLOSSAIRE ===== */
+
+/* Filigrane pour la page glossaire */
+.glossary-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 1;
+    opacity: 0.1;
+}
+
+.glossary-watermark img {
+    width: 300px;
+    height: auto;
+}
+
+/* Conteneur de Glossaire */
+.glossary-container {
+    position: absolute;
+    top: 80px;
+    z-index: 2;
+}
+
+/* Titre de Glossaire */
+.glossary-title {
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* Entrée Glossaire */
+.glossary-entry {
+    margin-bottom: 25px;
+}
+
+/* Titre d'une entrée Glossaire (acronyme - définition) */
+.glossary-entry-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    color: rgb(100, 4, 43);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+/* Détail du glossaire (paragraphe explicatif) */
+.glossary-detail {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    text-align: justify;
+}
+
 /* ===== PAGE WIKIPEDIA ===== */
 
 /* Filigrane pour la page wikipedia */

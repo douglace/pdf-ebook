@@ -17,6 +17,7 @@ class EbookGenerator
     private IntroductionGenerator $introductionGenerator;
     private ConclusionGenerator $conclusionGenerator;
     private QuizGenerator $quizGenerator;
+    private GlossaryGenerator $glossaryGenerator;
     private WikipediaGenerator $wikipediaGenerator;
     private WebsitesGenerator $websitesGenerator;
     private SuggestionsGenerator $suggestionsGenerator;
@@ -31,6 +32,7 @@ class EbookGenerator
         $this->introductionGenerator = new IntroductionGenerator();
         $this->conclusionGenerator = new ConclusionGenerator();
         $this->quizGenerator = new QuizGenerator();
+        $this->glossaryGenerator = new GlossaryGenerator();
         $this->wikipediaGenerator = new WikipediaGenerator();
         $this->websitesGenerator = new WebsitesGenerator();
         $this->suggestionsGenerator = new SuggestionsGenerator();
@@ -121,6 +123,25 @@ class EbookGenerator
             $websitesPage3Html = $websitesPages[2] ?? '';
         }
 
+        // Générer Glossaire
+        $glossaryContent = $this->glossaryGenerator->extractGlossaryContent($ebookData);
+        $glossaryPages = $this->glossaryGenerator->generateGlossaryHtml($glossaryContent, $language);
+        $glossaryTitleHtml = $this->glossaryGenerator->generateGlossaryTitleHtml($language);
+
+        // Construire le HTML des pages de Glossaire
+        $glossaryPage1Html = '';
+        $glossaryPage2Html = '';
+        $glossaryPage3Html = '';
+
+        if (!empty($glossaryPages)) {
+            // Page 1: Title + content + close container
+            $glossaryPage1Html = $glossaryTitleHtml . ($glossaryPages[0] ?? '') . '</div>';
+
+            // Pages 2 et 3: Wrap content in proper container
+            $glossaryPage2Html = $this->glossaryGenerator->wrapPageContent($glossaryPages[1] ?? '');
+            $glossaryPage3Html = $this->glossaryGenerator->wrapPageContent($glossaryPages[2] ?? '');
+        }
+
         // Générer Suggestions
         $suggestionsContent = $this->suggestionsGenerator->extractSuggestionsContent($ebookData);
         $suggestionsPages = $this->suggestionsGenerator->generateSuggestionsHtml($suggestionsContent, $language);
@@ -162,6 +183,9 @@ class EbookGenerator
             '{{TOC_CONTENT_PAGE2}}' => $tocPage2Html,
             '{{INTRODUCTION_CONTENT}}' => $introductionHtml,
             '{{CONCLUSION_CONTENT}}' => $conclusionHtml,
+            '{{GLOSSARY_CONTENT_PAGE1}}' => $glossaryPage1Html,
+            '{{GLOSSARY_CONTENT_PAGE2}}' => $glossaryPage2Html,
+            '{{GLOSSARY_CONTENT_PAGE3}}' => $glossaryPage3Html,
             '{{QUIZ_CONTENT_PAGE1}}' => $quizPage1Html,
             '{{QUIZ_CONTENT_PAGE2}}' => $quizPage2Html,
             '{{QUIZ_CONTENT_PAGE3}}' => $quizPage3Html,
