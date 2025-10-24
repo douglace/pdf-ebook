@@ -630,11 +630,12 @@ html, body {
 }
 
 /* Titre d'une entrée Glossaire (acronyme - définition) */
-.glossary-entry-title {
+.glossary-entry-title, .glossary-entry-title a {
     font-family: 'Quicksand', sans-serif;
     font-size: 13px;
     font-weight: bold;
-    color: rgb(100, 4, 43);
+    color: rgb(100, 4, 43) !important;
+    text-decoration: none !important;
     margin-bottom: 6px;
     line-height: 1.4;
 }

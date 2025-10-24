@@ -76,9 +76,11 @@ class ChaptersGenerator
      *
      * @param array|null $chaptersContent
      * @param string $watermarkImageBase64
+     * @param array $acronymAnchors Structure des ancres pour les liens
+     * @param array $firstOccurrenceFound Premières occurrences trouvées
      * @return array Array of page HTML strings
      */
-    public function generateChaptersPages(?array $chaptersContent, string $watermarkImageBase64): array
+    public function generateChaptersPages(?array $chaptersContent, string $watermarkImageBase64, array $acronymAnchors = [], array &$firstOccurrenceFound = []): array
     {
         if ($chaptersContent === null || empty($chaptersContent)) {
             return [];
@@ -154,7 +156,7 @@ class ChaptersGenerator
                 $currentPageHtml .= '<h2 id="' . $subchapterAnchorId . '" class="subchapter-title">' . $subchapterNumber . ' ' . $subchapterTitle . '</h2>';
                 $currentPageContentLength += strlen($subchapterTitle);
 
-                // Ajouter les paragraphes avec gestion des sauts de page
+                // Ajouter les paragraphes avec gestion des sauts de page et injection de liens
                 foreach ($subchapter['paragraphs'] as $paragraph) {
                     $paragraphLength = strlen($paragraph);
                     
@@ -170,8 +172,9 @@ class ChaptersGenerator
                         $isFirstPageOfChapter = false;
                     }
                     
-                    $paragraphHtml = htmlspecialchars($paragraph, ENT_QUOTES, 'UTF-8');
-                    $currentPageHtml .= '<p class="chapter-paragraph">' . $paragraphHtml . '</p>';
+                    // Injecter les liens vers les acronymes
+                    $paragraphWithLinks = $this->injectGlossaryLinks($paragraph, $acronymAnchors, $firstOccurrenceFound);
+                    $currentPageHtml .= '<p class="chapter-paragraph">' . $paragraphWithLinks . '</p>';
                     $currentPageContentLength += $paragraphLength;
                 }
             }
@@ -220,5 +223,49 @@ class ChaptersGenerator
     {
         $content = $this->extractChaptersContent($ebookData);
         return $content !== null && !empty($content);
+    }
+
+    /**
+     * Injecter automatiquement les liens vers les acronymes dans le texte
+     *
+     * @param string $text Texte à modifier
+     * @param array $acronymAnchors Structure des ancres
+     * @param array $firstOccurrenceFound Référence pour tracker les premières occurrences
+     * @return string Texte modifié avec les liens HTML
+     */
+    private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
+    {
+        if (empty($acronymAnchors)) {
+            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        }
+
+        // Créer le pattern regex pour tous les acronymes
+        $escapedAcronyms = array_map('preg_quote', array_keys($acronymAnchors));
+        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
+
+        return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+            $spaceBefore = $match[1];
+            $acronym = $match[2];
+            $spaceAfter = $match[3];
+
+            if (!isset($acronymAnchors[$acronym])) {
+                return htmlspecialchars($match[0], ENT_QUOTES, 'UTF-8');
+            }
+
+            $anchors = $acronymAnchors[$acronym];
+            $prefix = '';
+
+            // Première occurrence : ajouter l'ancre de retour
+            if (!isset($firstOccurrenceFound[$acronym])) {
+                $firstOccurrenceFound[$acronym] = true;
+                $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
+            }
+
+            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
+                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';
+
+            return $spaceBefore . $prefix . $link . $spaceAfter;
+        }, $text);
     }
 }

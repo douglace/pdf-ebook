@@ -22,6 +22,7 @@ class EbookGenerator
     private WebsitesGenerator $websitesGenerator;
     private SuggestionsGenerator $suggestionsGenerator;
     private ChaptersGenerator $chaptersGenerator;
+    private GlossaryLinkManager $glossaryLinkManager;
 
     public function __construct(string $projectRoot)
     {
@@ -38,6 +39,7 @@ class EbookGenerator
         $this->websitesGenerator = new WebsitesGenerator();
         $this->suggestionsGenerator = new SuggestionsGenerator();
         $this->chaptersGenerator = new ChaptersGenerator();
+        $this->glossaryLinkManager = new GlossaryLinkManager();
     }
 
     /**
@@ -69,13 +71,47 @@ class EbookGenerator
         $tocHtml = $this->tocGenerator->generateTOCHtml();
         $tocPage2Html = $this->tocGenerator->generateTOCPage2Html();
 
+        // === SYSTÈME DE LIENS GLOSSAIRE ===
+        // Identifier les acronymes depuis les entrées de glossaire
+        $rawData = $ebookData->getRawData();
+        $zones = $this->parseZones($rawData['formatted_text'] ?? '');
+        $acronyms = $this->glossaryLinkManager->identifyAcronyms($zones);
+        
+        // Créer les ancres de liens (simulation pour HTML - pas de TCPDF ici)
+        $acronymAnchors = [];
+        $usedSlugs = [];
+        foreach ($acronyms as $acronym) {
+            $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $acronym));
+            $glossSlug = 'gloss-' . $slug;
+            $backSlug = 'back-' . $slug;
+            $counter = 1;
+
+            while (isset($usedSlugs[$glossSlug])) {
+                $glossSlug = 'gloss-' . $slug . '-' . (++$counter);
+                $backSlug = 'back-' . $slug . '-' . $counter;
+            }
+
+            $usedSlugs[$glossSlug] = true;
+            $usedSlugs[$backSlug] = true;
+
+            $acronymAnchors[$acronym] = [
+                'gloss' => $glossSlug,
+                'back' => $backSlug,
+                'links' => [
+                    'gloss' => '#' . $glossSlug,  // Lien HTML vers le glossaire
+                    'back' => '#' . $backSlug,    // Lien HTML de retour
+                ],
+            ];
+        }
+        $firstOccurrenceFound = [];
+
         // Générer l'introduction
         $introductionContent = $this->introductionGenerator->extractIntroductionContent($ebookData);
         $introductionHtml = $this->introductionGenerator->generateIntroductionHtml($introductionContent);
 
         // Générer les chapitres (corps de l'ebook) - pages dynamiques
         $chaptersContent = $this->chaptersGenerator->extractChaptersContent($ebookData);
-        $chaptersPages = $this->chaptersGenerator->generateChaptersPages($chaptersContent, $coverData['watermarkBase64']);
+        $chaptersPages = $this->chaptersGenerator->generateChaptersPages($chaptersContent, $coverData['watermarkBase64'], $acronymAnchors, $firstOccurrenceFound);
 
         // Générer la conclusion
         $conclusionContent = $this->conclusionGenerator->extractConclusionContent($ebookData);
@@ -131,7 +167,7 @@ class EbookGenerator
 
         // Générer Glossaire
         $glossaryContent = $this->glossaryGenerator->extractGlossaryContent($ebookData);
-        $glossaryPages = $this->glossaryGenerator->generateGlossaryHtml($glossaryContent, $language);
+        $glossaryPages = $this->glossaryGenerator->generateGlossaryHtml($glossaryContent, $language, $acronymAnchors, $firstOccurrenceFound);
         $glossaryTitleHtml = $this->glossaryGenerator->generateGlossaryTitleHtml($language);
 
         // Construire le HTML des pages de Glossaire
@@ -218,6 +254,87 @@ class EbookGenerator
         );
 
         return $html;
+    }
+
+    /**
+     * Parser le formatted_text pour extraire les zones
+     * Basé sur la fonction parseZones du document EBOOK_GENERATION_COMPLETE.md
+     */
+    private function parseZones(string $formattedText): array
+    {
+        $zones = [
+            'titre' => '',
+            'sous_titre' => '',
+            'langue' => '',
+            'corps' => [],
+            'toc' => [],
+            'glossaire_links' => []
+        ];
+
+        if (empty($formattedText)) {
+            return $zones;
+        }
+
+        $lines = explode("\n", $formattedText);
+        $currentParagraph = '';
+        $collectingContent = false;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            // Extraire les champs spéciaux
+            if (preg_match('/\[DEBUT_CHAMP_TITRE\](.*?)\[FIN_CHAMP_TITRE\]/', $line, $matches)) {
+                $zones['titre'] = trim($matches[1]);
+                continue;
+            }
+            if (preg_match('/\[DEBUT_CHAMP_SOUS_TITRE\](.*?)\[FIN_CHAMP_SOUS_TITRE\]/', $line, $matches)) {
+                $zones['sous_titre'] = trim($matches[1]);
+                continue;
+            }
+            if (preg_match('/\[DEBUT_CHAMP_LANGUE\](.*?)\[FIN_CHAMP_LANGUE\]/', $line, $matches)) {
+                $zones['langue'] = trim($matches[1]);
+                continue;
+            }
+
+            // Détecter les balises de contenu
+            if (preg_match('/^\[(TITRE1|TITRE2|NORMAL|ENTREE_BIBLIOGRAPHIE|ENTREE_GLOSSAIRE|ENTREE_QUIZ|WIKI_LIEN)\]\s*(.+)$/i', $line, $matches)) {
+                $tag = strtoupper($matches[1]);
+                $textContent = trim($matches[2]);
+
+                // Traitement spécial pour WIKI_LIEN (balise fermante)
+                if ($tag === 'WIKI_LIEN' && preg_match('/^(.*?)\s*\[WIKI_LIEN\]$/', $textContent, $wiki_match)) {
+                    $textContent = trim($wiki_match[1]);
+                }
+
+                // Ajouter l'entrée au corps
+                $zones['corps'][] = [
+                    'tag' => $tag,
+                    'text' => $textContent
+                ];
+
+                // Ajouter à la TOC si c'est un titre
+                if ($tag === 'TITRE1' || $tag === 'TITRE2') {
+                    $zones['toc'][] = [
+                        'level' => $tag,
+                        'title' => $textContent
+                    ];
+                }
+
+                $collectingContent = true;
+                continue;
+            }
+
+            // Si on collecte du contenu et que la ligne n'est pas vide et ne commence pas par une balise
+            if ($collectingContent && !empty($line) && !preg_match('/^\[/', $line)) {
+                // Continuer le paragraphe précédent
+                if (!empty($zones['corps'])) {
+                    $lastIndex = count($zones['corps']) - 1;
+                    $zones['corps'][$lastIndex]['text'] .= ' ' . $line;
+                }
+            }
+        }
+
+        return $zones;
     }
 
 }

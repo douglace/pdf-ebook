@@ -54,9 +54,11 @@ class GlossaryGenerator
      *
      * @param array|null $glossaryContent
      * @param string $language
+     * @param array $acronymAnchors Structure des ancres pour les liens
+     * @param array $firstOccurrenceFound Premières occurrences trouvées
      * @return array Array of HTML strings for each page
      */
-    public function generateGlossaryHtml(?array $glossaryContent, string $language): array
+    public function generateGlossaryHtml(?array $glossaryContent, string $language, array $acronymAnchors = [], array $firstOccurrenceFound = []): array
     {
         if ($glossaryContent === null || empty($glossaryContent)) {
             return ['', '', ''];
@@ -105,11 +107,14 @@ class GlossaryGenerator
             // Construire le HTML de l'entrée
             $entryHtml = '<div class="glossary-entry">';
 
-            // Titre de l'entrée (acronyme - définition)
+            // Titre de l'entrée (acronyme - définition) avec liens
             if (!empty($acronym) && !empty($definition)) {
-                $entryHtml .= '<h3 class="glossary-entry-title">' . $acronym . ' - ' . $definition . '</h3>';
+                $entryText = $acronym . ' - ' . $definition;
+                $entryWithLinks = $this->createGlossaryEntryWithLinks($entryText, $acronymAnchors, $firstOccurrenceFound);
+                $entryHtml .= '<h3 class="glossary-entry-title">' . $entryWithLinks . '</h3>';
             } elseif (!empty($acronym)) {
-                $entryHtml .= '<h3 class="glossary-entry-title">' . $acronym . '</h3>';
+                $entryWithLinks = $this->createGlossaryEntryWithLinks($acronym, $acronymAnchors, $firstOccurrenceFound);
+                $entryHtml .= '<h3 class="glossary-entry-title">' . $entryWithLinks . '</h3>';
             }
 
             // Détail (paragraphe)
@@ -179,5 +184,40 @@ class GlossaryGenerator
     {
         $content = $this->extractGlossaryContent($ebookData);
         return $content !== null && !empty($content);
+    }
+
+    /**
+     * Créer une entrée de glossaire avec les liens retour
+     *
+     * @param string $text Texte de l'entrée de glossaire
+     * @param array $acronymAnchors Structure des ancres
+     * @param array $firstOccurrenceFound Premières occurrences trouvées
+     * @return string Texte modifié avec les liens retour
+     */
+    private function createGlossaryEntryWithLinks(string $text, array $acronymAnchors, array $firstOccurrenceFound): string
+    {
+        $parts = explode(' - ', $text, 2);
+        $acronym = trim($parts[0]);
+        $definition = $parts[1] ?? '';
+
+        if (!isset($acronymAnchors[$acronym])) {
+            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        }
+
+        $anchors = $acronymAnchors[$acronym];
+
+        // Créer l'ancre de destination du glossaire
+        $anchorHtml = '<a id="' . htmlspecialchars($anchors['gloss'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['gloss'], ENT_QUOTES) . '"></a>';
+
+        // Si première occurrence trouvée → lien retour cliquable
+        if (isset($firstOccurrenceFound[$acronym])) {
+            $linkHtml = '<a href="' . htmlspecialchars($anchors['links']['back'], ENT_QUOTES) . '" style="">' . 
+                       htmlspecialchars($acronym . ' - ' . $definition, ENT_QUOTES) . '</a>';
+
+            return $anchorHtml . $linkHtml;
+        } else {
+            // Pas de première occurrence → texte simple
+            return $anchorHtml . htmlspecialchars($acronym . ' - ' . $definition, ENT_QUOTES);
+        }
     }
 }
