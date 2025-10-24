@@ -107,6 +107,7 @@ class QuizGenerator
         $currentPageHtml = '';
         $questionsOnCurrentPage = 0;
         $maxQuestionsPerPage = 5; // Nombre moyen de questions par page
+        $pageNumber = 0; // Compteur de pages
 
         // Introduction du quiz
         $introduction = '<div class="quiz-introduction">';
@@ -123,9 +124,10 @@ class QuizGenerator
             // (question + 4 réponses = environ 1 question)
             if ($questionsOnCurrentPage >= $maxQuestionsPerPage && $index > 0) {
                 // Sauvegarder la page actuelle et commencer une nouvelle
-                $pages[] = $this->wrapPageContent($currentPageHtml);
+                $pages[] = $this->wrapPageContent($currentPageHtml, $pageNumber === 0);
                 $currentPageHtml = '';
                 $questionsOnCurrentPage = 0;
+                $pageNumber++;
             }
 
             // Ajouter la question
@@ -161,7 +163,7 @@ class QuizGenerator
 
         // Ajouter la dernière page
         if (!empty($currentPageHtml)) {
-            $pages[] = $this->wrapPageContent($currentPageHtml);
+            $pages[] = $this->wrapPageContent($currentPageHtml, $pageNumber === 0);
         }
 
         return $pages;
@@ -170,9 +172,10 @@ class QuizGenerator
     /**
      * Envelopper le contenu dans un conteneur de page
      */
-    private function wrapPageContent(string $content): string
+    private function wrapPageContent(string $content, bool $isFirstPage = false): string
     {
-        return '<div class="quiz-container page-container"> <h1 class="quiz-title page-title">QUIZ</h1>' . $content . '</div>';
+        $titleHtml = $isFirstPage ? '<h1 class="quiz-title page-title">QUIZ</h1>' : '';
+        return '<div class="quiz-container page-container">' . $titleHtml . $content . '</div>';
     }
 
     /**

@@ -78,7 +78,8 @@ class EbookGenerator
         $quizPage3Html = '';
 
         if (!empty($quizPages)) {
-            $quizPage1Html = $quizTitleHtml . ($quizPages[0] ?? '');
+            // Intégrer l'ancre dans la première page
+            $quizPage1Html = str_replace('<div class="quiz-container page-container">', '<a id="quiz" name="quiz"></a><div class="quiz-container page-container">', $quizPages[0] ?? '');
             $quizPage2Html = $quizPages[1] ?? '';
             $quizPage3Html = $quizPages[2] ?? '';
         }
