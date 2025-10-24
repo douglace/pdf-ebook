@@ -18,6 +18,7 @@ class EbookGenerator
     private ConclusionGenerator $conclusionGenerator;
     private QuizGenerator $quizGenerator;
     private WikipediaGenerator $wikipediaGenerator;
+    private WebsitesGenerator $websitesGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -30,6 +31,7 @@ class EbookGenerator
         $this->conclusionGenerator = new ConclusionGenerator();
         $this->quizGenerator = new QuizGenerator();
         $this->wikipediaGenerator = new WikipediaGenerator();
+        $this->websitesGenerator = new WebsitesGenerator();
     }
 
     /**
@@ -101,6 +103,22 @@ class EbookGenerator
             $wikipediaPage3Html = $wikipediaPages[2] ?? '';
         }
 
+        // Générer Sites Web
+        $websitesContent = $this->websitesGenerator->extractWebsitesContent($ebookData);
+        $websitesPages = $this->websitesGenerator->generateWebsitesHtml($websitesContent, $language);
+        $websitesTitleHtml = $this->websitesGenerator->generateWebsitesTitleHtml();
+
+        // Construire le HTML des pages de Sites Web
+        $websitesPage1Html = '';
+        $websitesPage2Html = '';
+        $websitesPage3Html = '';
+
+        if (!empty($websitesPages)) {
+            $websitesPage1Html = $websitesTitleHtml . ($websitesPages[0] ?? '');
+            $websitesPage2Html = $websitesPages[1] ?? '';
+            $websitesPage3Html = $websitesPages[2] ?? '';
+        }
+
         // Remplacer les placeholders dans le CSS
         $stylesReplaced = str_replace(
             ['{{FONT_REGULAR}}', '{{FONT_BOLD}}', '{{DEGRADE_IMAGE}}', 'rgb(255, 230, 200); /* Sera remplacé par {{CATEGORY_COLOR}} */'],
@@ -128,7 +146,10 @@ class EbookGenerator
             '{{QUIZ_CONTENT_PAGE3}}' => $quizPage3Html,
             '{{WIKIPEDIA_CONTENT_PAGE1}}' => $wikipediaPage1Html,
             '{{WIKIPEDIA_CONTENT_PAGE2}}' => $wikipediaPage2Html,
-            '{{WIKIPEDIA_CONTENT_PAGE3}}' => $wikipediaPage3Html
+            '{{WIKIPEDIA_CONTENT_PAGE3}}' => $wikipediaPage3Html,
+            '{{WEBSITES_CONTENT_PAGE1}}' => $websitesPage1Html,
+            '{{WEBSITES_CONTENT_PAGE2}}' => $websitesPage2Html,
+            '{{WEBSITES_CONTENT_PAGE3}}' => $websitesPage3Html
         ];
 
 
