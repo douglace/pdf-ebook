@@ -21,6 +21,7 @@ class EbookGenerator
     private WikipediaGenerator $wikipediaGenerator;
     private WebsitesGenerator $websitesGenerator;
     private SuggestionsGenerator $suggestionsGenerator;
+    private ChaptersGenerator $chaptersGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -36,6 +37,7 @@ class EbookGenerator
         $this->wikipediaGenerator = new WikipediaGenerator();
         $this->websitesGenerator = new WebsitesGenerator();
         $this->suggestionsGenerator = new SuggestionsGenerator();
+        $this->chaptersGenerator = new ChaptersGenerator();
     }
 
     /**
@@ -70,6 +72,10 @@ class EbookGenerator
         // Générer l'introduction
         $introductionContent = $this->introductionGenerator->extractIntroductionContent($ebookData);
         $introductionHtml = $this->introductionGenerator->generateIntroductionHtml($introductionContent);
+
+        // Générer les chapitres (corps de l'ebook) - pages dynamiques
+        $chaptersContent = $this->chaptersGenerator->extractChaptersContent($ebookData);
+        $chaptersPages = $this->chaptersGenerator->generateChaptersPages($chaptersContent, $coverData['watermarkBase64']);
 
         // Générer la conclusion
         $conclusionContent = $this->conclusionGenerator->extractConclusionContent($ebookData);
@@ -168,6 +174,9 @@ class EbookGenerator
             $styles
         );
 
+        // Concaténer toutes les pages de chapitres
+        $allChaptersHtml = implode("\n", $chaptersPages);
+
         // Remplacer les placeholders dans le HTML
         $replacements = [
             '{{STYLES}}' => $stylesReplaced,
@@ -182,6 +191,7 @@ class EbookGenerator
             '{{TOC_CONTENT}}' => $tocHtml,
             '{{TOC_CONTENT_PAGE2}}' => $tocPage2Html,
             '{{INTRODUCTION_CONTENT}}' => $introductionHtml,
+            '{{CHAPTERS_PAGES}}' => $allChaptersHtml,
             '{{CONCLUSION_CONTENT}}' => $conclusionHtml,
             '{{GLOSSARY_CONTENT_PAGE1}}' => $glossaryPage1Html,
             '{{GLOSSARY_CONTENT_PAGE2}}' => $glossaryPage2Html,

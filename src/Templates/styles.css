@@ -532,6 +532,61 @@ html, body {
     line-height: 1.6;
 }
 
+/* ===== PAGES CHAPITRES (CORPS DE L'EBOOK) ===== */
+
+/* Filigrane pour les pages de chapitres */
+.chapter-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 1;
+    opacity: 0.1;
+}
+
+.chapter-watermark img {
+    width: 300px;
+    height: auto;
+}
+
+/* Conteneur des chapitres */
+.chapter-container {
+    position: absolute;
+    top: 80px;
+    z-index: 2;
+}
+
+/* Titre du chapitre (H1) */
+.chapter-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    color: rgb(100, 4, 43);
+    margin-bottom: 25px;
+    line-height: 1.3;
+}
+
+/* Titre du sous-chapitre (H2) */
+.subchapter-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: rgb(100, 4, 43);
+    margin-top: 20px;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+/* Paragraphe du chapitre */
+.chapter-paragraph {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 15px;
+}
+
 /* ===== PAGE GLOSSAIRE ===== */
 
 /* Filigrane pour la page glossaire */
