@@ -17,6 +17,7 @@ class EbookGenerator
     private IntroductionGenerator $introductionGenerator;
     private ConclusionGenerator $conclusionGenerator;
     private QuizGenerator $quizGenerator;
+    private WikipediaGenerator $wikipediaGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -28,6 +29,7 @@ class EbookGenerator
         $this->introductionGenerator = new IntroductionGenerator();
         $this->conclusionGenerator = new ConclusionGenerator();
         $this->quizGenerator = new QuizGenerator();
+        $this->wikipediaGenerator = new WikipediaGenerator();
     }
 
     /**
@@ -78,10 +80,25 @@ class EbookGenerator
         $quizPage3Html = '';
 
         if (!empty($quizPages)) {
-            // Intégrer l'ancre dans la première page
-            $quizPage1Html = str_replace('<div class="quiz-container page-container">', '<a id="quiz" name="quiz"></a><div class="quiz-container page-container">', $quizPages[0] ?? '');
+            $quizPage1Html = $quizTitleHtml . ($quizPages[0] ?? '');
             $quizPage2Html = $quizPages[1] ?? '';
             $quizPage3Html = $quizPages[2] ?? '';
+        }
+
+        // Générer Wikipedia
+        $wikipediaContent = $this->wikipediaGenerator->extractWikipediaContent($ebookData);
+        $wikipediaPages = $this->wikipediaGenerator->generateWikipediaHtml($wikipediaContent, $language);
+        $wikipediaTitleHtml = $this->wikipediaGenerator->generateWikipediaTitleHtml();
+
+        // Construire le HTML des pages de Wikipedia
+        $wikipediaPage1Html = '';
+        $wikipediaPage2Html = '';
+        $wikipediaPage3Html = '';
+
+        if (!empty($wikipediaPages)) {
+            $wikipediaPage1Html = $wikipediaTitleHtml . ($wikipediaPages[0] ?? '');
+            $wikipediaPage2Html = $wikipediaPages[1] ?? '';
+            $wikipediaPage3Html = $wikipediaPages[2] ?? '';
         }
 
         // Remplacer les placeholders dans le CSS
@@ -108,7 +125,10 @@ class EbookGenerator
             '{{CONCLUSION_CONTENT}}' => $conclusionHtml,
             '{{QUIZ_CONTENT_PAGE1}}' => $quizPage1Html,
             '{{QUIZ_CONTENT_PAGE2}}' => $quizPage2Html,
-            '{{QUIZ_CONTENT_PAGE3}}' => $quizPage3Html
+            '{{QUIZ_CONTENT_PAGE3}}' => $quizPage3Html,
+            '{{WIKIPEDIA_CONTENT_PAGE1}}' => $wikipediaPage1Html,
+            '{{WIKIPEDIA_CONTENT_PAGE2}}' => $wikipediaPage2Html,
+            '{{WIKIPEDIA_CONTENT_PAGE3}}' => $wikipediaPage3Html
         ];
 
 
