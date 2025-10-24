@@ -13,12 +13,13 @@ class TableOfContentsGenerator
     /**
      * Ajouter une entrée à la table des matières
      */
-    public function addEntry(string $title, string $level, int $page): void
+    public function addEntry(string $title, string $level, int $page, string $anchor = null): void
     {
         $this->tocEntries[] = [
             'title' => $this->sanitizeTitle($title),
             'level' => $level,
-            'page' => $page
+            'page' => $page,
+            'anchor' => $anchor
         ];
     }
 
@@ -41,7 +42,16 @@ class TableOfContentsGenerator
             $class = $entry['level'] === 'TITRE1' ? 'toc-entry-level1' : 'toc-entry-level2';
             
             $html .= '<div class="' . $class . '">';
-            $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+            
+            // Créer un lien si une ancre est disponible
+            if (!empty($entry['anchor'])) {
+                $html .= '<a href="#' . $entry['anchor'] . '" class="toc-link">';
+                $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+                $html .= '</a>';
+            } else {
+                $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+            }
+            
             $html .= '<span class="toc-dots"></span>';
             $html .= '<span class="toc-page">' . $entry['page'] . '</span>';
             $html .= '</div>';
@@ -74,7 +84,16 @@ class TableOfContentsGenerator
             $class = $entry['level'] === 'TITRE1' ? 'toc-entry-level1' : 'toc-entry-level2';
             
             $html .= '<div class="' . $class . '">';
-            $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+            
+            // Créer un lien si une ancre est disponible
+            if (!empty($entry['anchor'])) {
+                $html .= '<a href="#' . $entry['anchor'] . '" class="toc-link">';
+                $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+                $html .= '</a>';
+            } else {
+                $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+            }
+            
             $html .= '<span class="toc-dots"></span>';
             $html .= '<span class="toc-page">' . $entry['page'] . '</span>';
             $html .= '</div>';
@@ -135,7 +154,7 @@ class TableOfContentsGenerator
                 $chapterTitle = $chapter['chapter'] ?? '';
                 
                 if ($chapterNumber === '0') {
-                    $this->addEntry('INTRODUCTION - ' . $chapterTitle, 'TITRE1', $currentPage);
+                    $this->addEntry('INTRODUCTION - ' . $chapterTitle, 'TITRE1', $currentPage, 'introduction');
                     $currentPage++;
                     break;
                 }

@@ -28,7 +28,7 @@ try {
     echo "      ✓ Données chargées avec succès\n\n";
 
     // 2. Générer le HTML complet de l'ebook (toutes les pages)
-    echo "[2/3] Génération du HTML de l'ebook (Page 1: Couverture + Page 2: Licence)...\n";
+    echo "[2/3] Génération du HTML de l'ebook (Pages: Couverture + Licence + TOC + Introduction)...\n";
     $ebookGenerator = new EbookGenerator(PROJECT_ROOT);
     $html = $ebookGenerator->generate($ebookData, time());
 
@@ -40,8 +40,8 @@ try {
     echo "      - HTML sauvegardé: output/ebook_debug.html\n";
     echo "      ✓ HTML complet généré avec succès\n\n";
 
-    // 3. Générer le PDF avec les 2 pages
-    echo "[3/3] Génération du PDF avec les 2 pages...\n";
+    // 3. Générer le PDF avec toutes les pages
+    echo "[3/3] Génération du PDF avec toutes les pages...\n";
     echo "      (Cela peut prendre quelques secondes...)\n";
     $pdfGenerator = new PdfGenerator(PROJECT_ROOT);
     $pdfPath = $pdfGenerator->generateFromHtml($html, 'smartbook_' . $coverData['id']);
@@ -52,9 +52,11 @@ try {
     echo "  Résultat:\n";
     echo "====================================\n";
     echo "  ✓ PDF généré: " . basename($pdfPath) . "\n";
-    echo "  ✓ Nombre de pages: 2\n";
+    echo "  ✓ Nombre de pages: 5\n";
     echo "    - Page 1: Couverture\n";
     echo "    - Page 2: Mentions légales\n";
+    echo "    - Page 3-4: Table des matières\n";
+    echo "    - Page 5: Introduction\n";
     echo "  ✓ Taille: " . round(filesize($pdfPath) / 1024, 2) . " Ko\n";
     echo "  ✓ Emplacement: {$pdfPath}\n\n";
 
