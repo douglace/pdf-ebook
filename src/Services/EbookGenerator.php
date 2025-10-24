@@ -16,6 +16,7 @@ class EbookGenerator
     private TableOfContentsGenerator $tocGenerator;
     private IntroductionGenerator $introductionGenerator;
     private ConclusionGenerator $conclusionGenerator;
+    private QuizGenerator $quizGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -26,6 +27,7 @@ class EbookGenerator
         $this->tocGenerator = new TableOfContentsGenerator();
         $this->introductionGenerator = new IntroductionGenerator();
         $this->conclusionGenerator = new ConclusionGenerator();
+        $this->quizGenerator = new QuizGenerator();
     }
 
     /**
@@ -65,6 +67,22 @@ class EbookGenerator
         $conclusionContent = $this->conclusionGenerator->extractConclusionContent($ebookData);
         $conclusionHtml = $this->conclusionGenerator->generateConclusionHtml($conclusionContent);
 
+        // Générer le quiz
+        $quizContent = $this->quizGenerator->extractQuizContent($ebookData);
+        $quizPages = $this->quizGenerator->generateQuizHtml($quizContent);
+        $quizTitleHtml = $this->quizGenerator->generateQuizTitleHtml();
+
+        // Construire le HTML des pages de quiz
+        $quizPage1Html = '';
+        $quizPage2Html = '';
+        $quizPage3Html = '';
+
+        if (!empty($quizPages)) {
+            $quizPage1Html = $quizTitleHtml . ($quizPages[0] ?? '');
+            $quizPage2Html = $quizPages[1] ?? '';
+            $quizPage3Html = $quizPages[2] ?? '';
+        }
+
         // Remplacer les placeholders dans le CSS
         $stylesReplaced = str_replace(
             ['{{FONT_REGULAR}}', '{{FONT_BOLD}}', '{{DEGRADE_IMAGE}}', 'rgb(255, 230, 200); /* Sera remplacé par {{CATEGORY_COLOR}} */'],
@@ -86,7 +104,10 @@ class EbookGenerator
             '{{TOC_CONTENT}}' => $tocHtml,
             '{{TOC_CONTENT_PAGE2}}' => $tocPage2Html,
             '{{INTRODUCTION_CONTENT}}' => $introductionHtml,
-            '{{CONCLUSION_CONTENT}}' => $conclusionHtml
+            '{{CONCLUSION_CONTENT}}' => $conclusionHtml,
+            '{{QUIZ_CONTENT_PAGE1}}' => $quizPage1Html,
+            '{{QUIZ_CONTENT_PAGE2}}' => $quizPage2Html,
+            '{{QUIZ_CONTENT_PAGE3}}' => $quizPage3Html
         ];
 
 
