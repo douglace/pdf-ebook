@@ -391,3 +391,47 @@ html, body {
 .introduction-paragraph:last-child {
     margin-bottom: 0;
 }
+
+/* ===== PAGE CONCLUSION ===== */
+
+/* Filigrane pour la page conclusion */
+.conclusion-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 1;
+    opacity: 0.1;
+}
+
+.conclusion-watermark img {
+    width: 300px;
+    height: auto;
+}
+
+/* Conteneur de la conclusion */
+.conclusion-container {
+    position: absolute;
+    top: 80px;
+    z-index: 2;
+}
+
+/* Titre de la conclusion */
+.conclusion-title {
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* Paragraphes de la conclusion */
+.conclusion-paragraph {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 15px;
+    text-indent: 0;
+}
+
+.conclusion-paragraph:last-child {
+    margin-bottom: 0;
+}

@@ -15,6 +15,7 @@ class EbookGenerator
     private LicenseGenerator $licenseGenerator;
     private TableOfContentsGenerator $tocGenerator;
     private IntroductionGenerator $introductionGenerator;
+    private ConclusionGenerator $conclusionGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -24,6 +25,7 @@ class EbookGenerator
         $this->licenseGenerator = new LicenseGenerator();
         $this->tocGenerator = new TableOfContentsGenerator();
         $this->introductionGenerator = new IntroductionGenerator();
+        $this->conclusionGenerator = new ConclusionGenerator();
     }
 
     /**
@@ -59,6 +61,10 @@ class EbookGenerator
         $introductionContent = $this->introductionGenerator->extractIntroductionContent($ebookData);
         $introductionHtml = $this->introductionGenerator->generateIntroductionHtml($introductionContent);
 
+        // Générer la conclusion
+        $conclusionContent = $this->conclusionGenerator->extractConclusionContent($ebookData);
+        $conclusionHtml = $this->conclusionGenerator->generateConclusionHtml($conclusionContent);
+
         // Remplacer les placeholders dans le CSS
         $stylesReplaced = str_replace(
             ['{{FONT_REGULAR}}', '{{FONT_BOLD}}', '{{DEGRADE_IMAGE}}', 'rgb(255, 230, 200); /* Sera remplacé par {{CATEGORY_COLOR}} */'],
@@ -79,7 +85,8 @@ class EbookGenerator
             '{{CREATION_DATE}}' => $creationDate,
             '{{TOC_CONTENT}}' => $tocHtml,
             '{{TOC_CONTENT_PAGE2}}' => $tocPage2Html,
-            '{{INTRODUCTION_CONTENT}}' => $introductionHtml
+            '{{INTRODUCTION_CONTENT}}' => $introductionHtml,
+            '{{CONCLUSION_CONTENT}}' => $conclusionHtml
         ];
 
 

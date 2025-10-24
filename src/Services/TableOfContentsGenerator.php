@@ -13,7 +13,7 @@ class TableOfContentsGenerator
     /**
      * Ajouter une entrée à la table des matières
      */
-    public function addEntry(string $title, string $level, int $page, string $anchor = null): void
+    public function addEntry(string $title, string $level, int $page, ?string $anchor = null): void
     {
         $this->tocEntries[] = [
             'title' => $this->sanitizeTitle($title),
@@ -186,9 +186,9 @@ class TableOfContentsGenerator
             foreach ($data['tdm']['chapters'] as $chapter) {
                 $chapterNumber = $chapter['numero_chapter'] ?? '';
                 $chapterTitle = $chapter['chapter'] ?? '';
-                
+
                 if ($chapterNumber === '-1') {
-                    $this->addEntry('CONCLUSION - ' . $chapterTitle, 'TITRE1', $currentPage);
+                    $this->addEntry('CONCLUSION - ' . $chapterTitle, 'TITRE1', $currentPage, 'conclusion');
                     $currentPage++;
                     break;
                 }
