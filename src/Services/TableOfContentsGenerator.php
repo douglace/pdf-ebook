@@ -200,7 +200,7 @@ class TableOfContentsGenerator
         $this->addEntry('QUIZ', 'TITRE1', ++$currentPage, 'quiz');
         $this->addEntry('WIKIPEDIA', 'TITRE1', ++$currentPage, 'wikipedia');
         $this->addEntry('SITES WEB', 'TITRE1', ++$currentPage, 'websites');
-        $this->addEntry('SUGGESTIONS', 'TITRE1', ++$currentPage);
+        $this->addEntry('SUGGESTIONS', 'TITRE1', ++$currentPage, 'suggestions');
     }
 
     /**

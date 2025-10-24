@@ -699,3 +699,70 @@ html, body {
 .websites-link a:hover {
     text-decoration: underline;
 }
+
+/* ===== PAGE SUGGESTIONS ===== */
+
+/* Filigrane pour la page suggestions */
+.suggestions-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 1;
+    opacity: 0.1;
+}
+
+.suggestions-watermark img {
+    width: 300px;
+    height: auto;
+}
+
+/* Conteneur de Suggestions */
+.suggestions-container {
+    position: absolute;
+    top: 80px;
+    z-index: 2;
+}
+
+/* Titre de Suggestions */
+.suggestions-title {
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* Introduction de Suggestions */
+.suggestions-introduction {
+    margin-bottom: 30px;
+}
+
+.suggestions-introduction p {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    text-align: justify;
+}
+
+/* Entrée Suggestions */
+.suggestions-entry {
+    margin-bottom: 35px;
+}
+
+/* Titre d'une entrée Suggestions */
+.suggestions-entry-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: rgb(100, 4, 43);
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+/* Description Suggestions */
+.suggestions-description {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 8px;
+}

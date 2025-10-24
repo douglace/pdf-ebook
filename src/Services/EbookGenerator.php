@@ -19,6 +19,7 @@ class EbookGenerator
     private QuizGenerator $quizGenerator;
     private WikipediaGenerator $wikipediaGenerator;
     private WebsitesGenerator $websitesGenerator;
+    private SuggestionsGenerator $suggestionsGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -32,6 +33,7 @@ class EbookGenerator
         $this->quizGenerator = new QuizGenerator();
         $this->wikipediaGenerator = new WikipediaGenerator();
         $this->websitesGenerator = new WebsitesGenerator();
+        $this->suggestionsGenerator = new SuggestionsGenerator();
     }
 
     /**
@@ -119,6 +121,25 @@ class EbookGenerator
             $websitesPage3Html = $websitesPages[2] ?? '';
         }
 
+        // Générer Suggestions
+        $suggestionsContent = $this->suggestionsGenerator->extractSuggestionsContent($ebookData);
+        $suggestionsPages = $this->suggestionsGenerator->generateSuggestionsHtml($suggestionsContent, $language);
+        $suggestionsTitleHtml = $this->suggestionsGenerator->generateSuggestionsTitleHtml($language);
+
+        // Construire le HTML des pages de Suggestions
+        $suggestionsPage1Html = '';
+        $suggestionsPage2Html = '';
+        $suggestionsPage3Html = '';
+
+        if (!empty($suggestionsPages)) {
+            // Page 1: Title + content + close container
+            $suggestionsPage1Html = $suggestionsTitleHtml . ($suggestionsPages[0] ?? '') . '</div>';
+
+            // Pages 2 et 3: Wrap content in proper container
+            $suggestionsPage2Html = $this->suggestionsGenerator->wrapPageContent($suggestionsPages[1] ?? '');
+            $suggestionsPage3Html = $this->suggestionsGenerator->wrapPageContent($suggestionsPages[2] ?? '');
+        }
+
         // Remplacer les placeholders dans le CSS
         $stylesReplaced = str_replace(
             ['{{FONT_REGULAR}}', '{{FONT_BOLD}}', '{{DEGRADE_IMAGE}}', 'rgb(255, 230, 200); /* Sera remplacé par {{CATEGORY_COLOR}} */'],
@@ -149,7 +170,10 @@ class EbookGenerator
             '{{WIKIPEDIA_CONTENT_PAGE3}}' => $wikipediaPage3Html,
             '{{WEBSITES_CONTENT_PAGE1}}' => $websitesPage1Html,
             '{{WEBSITES_CONTENT_PAGE2}}' => $websitesPage2Html,
-            '{{WEBSITES_CONTENT_PAGE3}}' => $websitesPage3Html
+            '{{WEBSITES_CONTENT_PAGE3}}' => $websitesPage3Html,
+            '{{SUGGESTIONS_CONTENT_PAGE1}}' => $suggestionsPage1Html,
+            '{{SUGGESTIONS_CONTENT_PAGE2}}' => $suggestionsPage2Html,
+            '{{SUGGESTIONS_CONTENT_PAGE3}}' => $suggestionsPage3Html
         ];
 
 
