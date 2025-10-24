@@ -59,6 +59,97 @@ html, body {
     background-position: left top;
 }
 
+/* ===== PAGE TABLE DES MATIÈRES ===== */
+
+/* Filigrane pour la page TOC */
+.toc-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    opacity: 0.1;
+    z-index: 1;
+}
+
+.toc-watermark img {
+    width: 400px;
+    height: auto;
+}
+
+.page-container {
+    left: 120px;
+    right: 80px;
+}
+
+/* Conteneur principal de la TOC */
+.toc-container {
+    position: absolute;
+    top: 80px;
+    bottom: 60px;
+    z-index: 2;
+    font-family: 'Quicksand', sans-serif;
+    overflow: hidden;
+}
+
+/* Titre de la table des matières */
+.toc-title {
+    font-size: 35px;
+    font-weight: bold;
+    color: rgb(30, 30, 30);
+    text-align: left;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Entrées de niveau 1 (chapitres) */
+.toc-entry-level1 {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 15px;
+    font-size: 18px;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: rgb(50, 50, 50);
+    page-break-inside: avoid;
+}
+
+/* Entrées de niveau 2 (sous-chapitres) */
+.toc-entry-level2 {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 10px;
+    margin-left: 20px;
+    font-size: 12px;
+    font-weight: normal;
+    color: rgb(80, 80, 80);
+    page-break-inside: avoid;
+}
+
+/* Titre de l'entrée TOC */
+.toc-entry-title {
+    flex: 0 0 auto;
+    margin-right: 10px;
+}
+
+/* Points de liaison dans la TOC */
+.toc-dots {
+    flex: 1 1 auto;
+    border-bottom: 1px dotted rgb(150, 150, 150);
+    height: 1px;
+    margin: 0 5px;
+    align-self: flex-end;
+    margin-bottom: 3px;
+}
+
+/* Numéro de page dans la TOC */
+.toc-page {
+    flex: 0 0 auto;
+    font-weight: bold;
+    color: rgb(30, 30, 30);
+    margin-left: 10px;
+}
+
 /* ===== PAGE COUVERTURE ===== */
 
 /* Zone de l'image de couverture */
@@ -116,7 +207,7 @@ html, body {
     bottom: 150px;
     right: 30px;
     height: 3px;
-    background-color: {{CATEGORY_COLOR}};
+    background-color: rgb(255, 230, 200); /* Sera remplacé par {{CATEGORY_COLOR}} */
 }
 
 /* Label de catégorie */
@@ -166,8 +257,6 @@ html, body {
 /* Conteneur du texte de licence */
 .license-container {
     position: absolute;
-    left: 120px;
-    right: 80px;
     bottom: 180px;
     z-index: 2;
 }

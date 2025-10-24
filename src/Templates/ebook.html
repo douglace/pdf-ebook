@@ -48,7 +48,7 @@
         </div>
 
         <!-- Conteneur du texte de licence -->
-        <div class="license-container">
+        <div class="license-container page-container">
             {{LICENSE_TEXT}}
 
             <div class="creation-date">
@@ -66,6 +66,34 @@
         <div class="license-logo">
             <img src="{{LOGO_IMAGE}}" alt="Smartbook">
         </div>
+    </div>
+
+    <!-- PAGES 3-4: TABLE DES MATIÈRES (continu sur 2 pages) -->
+    <div class="page">
+        <!-- Bande verticale gauche avec dégradé -->
+        <div class="left-gradient"></div>
+
+        <!-- Filigrane Encyclo-AI (logo oblique) -->
+        <div class="toc-watermark">
+            <img src="{{WATERMARK_IMAGE}}" alt="Encyclo-AI">
+        </div>
+
+        <!-- Contenu de la table des matières qui continue sur la page suivante -->
+        {{TOC_CONTENT}}
+    </div>
+
+    <!-- PAGE 4: CONTINUATION DE LA TOC -->
+    <div class="page">
+        <!-- Bande verticale gauche avec dégradé -->
+        <div class="left-gradient"></div>
+
+        <!-- Filigrane Encyclo-AI (logo oblique) -->
+        <div class="toc-watermark">
+            <img src="{{WATERMARK_IMAGE}}" alt="Encyclo-AI">
+        </div>
+
+        <!-- Suite du contenu de la table des matières -->
+        {{TOC_CONTENT_PAGE2}}
     </div>
 </body>
 </html>

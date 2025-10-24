@@ -181,4 +181,12 @@ class EbookData
             'categoryColorCss' => sprintf('rgb(%d, %d, %d)', ...$categoryColor)
         ];
     }
+
+    /**
+     * Obtenir les données brutes complètes
+     */
+    public function getRawData(): array
+    {
+        return $this->data;
+    }
 }

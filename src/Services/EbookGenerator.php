@@ -13,6 +13,7 @@ class EbookGenerator
     private string $stylesPath;
     private CoverGenerator $coverGenerator;
     private LicenseGenerator $licenseGenerator;
+    private TableOfContentsGenerator $tocGenerator;
 
     public function __construct(string $projectRoot)
     {
@@ -20,6 +21,7 @@ class EbookGenerator
         $this->stylesPath = $projectRoot . '/src/Templates/styles.css';
         $this->coverGenerator = new CoverGenerator($projectRoot);
         $this->licenseGenerator = new LicenseGenerator();
+        $this->tocGenerator = new TableOfContentsGenerator();
     }
 
     /**
@@ -46,9 +48,14 @@ class EbookGenerator
         $licenseText = $this->licenseGenerator->getLicenseText($language);
         $creationDate = $this->licenseGenerator->formatCreationDate($createdTimestamp, $language);
 
+        // Générer la table des matières
+        $this->tocGenerator->extractTOCFromData($ebookData->getRawData());
+        $tocHtml = $this->tocGenerator->generateTOCHtml();
+        $tocPage2Html = $this->tocGenerator->generateTOCPage2Html();
+
         // Remplacer les placeholders dans le CSS
         $stylesReplaced = str_replace(
-            ['{{FONT_REGULAR}}', '{{FONT_BOLD}}', '{{DEGRADE_IMAGE}}', '{{CATEGORY_COLOR}}'],
+            ['{{FONT_REGULAR}}', '{{FONT_BOLD}}', '{{DEGRADE_IMAGE}}', 'rgb(255, 230, 200); /* Sera remplacé par {{CATEGORY_COLOR}} */'],
             [$coverData['fontRegularBase64'], $coverData['fontBoldBase64'], $coverData['degradeBase64'], $coverData['categoryColorCss']],
             $styles
         );
@@ -63,8 +70,11 @@ class EbookGenerator
             '{{SUBTITLE}}' => $coverData['subtitle'],
             '{{CATEGORY_LABEL}}' => $coverData['categoryLabel'],
             '{{LICENSE_TEXT}}' => $licenseText,
-            '{{CREATION_DATE}}' => $creationDate
+            '{{CREATION_DATE}}' => $creationDate,
+            '{{TOC_CONTENT}}' => $tocHtml,
+            '{{TOC_CONTENT_PAGE2}}' => $tocPage2Html
         ];
+
 
         $html = str_replace(
             array_keys($replacements),
