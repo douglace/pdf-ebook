@@ -64,27 +64,32 @@ class TableOfContentsGenerator
 
     /**
      * Générer le HTML de la deuxième page de la table des matières
+     * Stratégie : REMPLIR AU MAXIMUM la page 2 avant de passer à la page 3
      */
     public function generateTOCPage2Html(): string
     {
         if (empty($this->tocEntries)) {
             return '';
         }
-        
+
         $firstPageEntries = $this->calculateFirstPageEntries();
-        
+
         if ($firstPageEntries >= count($this->tocEntries)) {
             return '<div class="toc-container page-container"></div>';
         }
-        
+
+        // Calculer combien d'entrées peuvent tenir sur la page 2
+        $page2Entries = $this->calculatePageCapacity($firstPageEntries);
+        $endIndex = min($firstPageEntries + $page2Entries, count($this->tocEntries));
+
         $html = '<div class="toc-container page-container">';
-        
-        for ($i = $firstPageEntries; $i < count($this->tocEntries); $i++) {
+
+        for ($i = $firstPageEntries; $i < $endIndex; $i++) {
             $entry = $this->tocEntries[$i];
             $class = $entry['level'] === 'TITRE1' ? 'toc-entry-level1' : 'toc-entry-level2';
-            
+
             $html .= '<div class="' . $class . '">';
-            
+
             // Créer un lien si une ancre est disponible
             if (!empty($entry['anchor'])) {
                 $html .= '<a href="#' . $entry['anchor'] . '" class="toc-link">';
@@ -93,51 +98,149 @@ class TableOfContentsGenerator
             } else {
                 $html .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
             }
-            
+
             $html .= '<span class="toc-dots"></span>';
             $html .= '<span class="toc-page">' . $entry['page'] . '</span>';
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
-        
+
         return $html;
     }
 
     /**
+     * Calculer combien d'entrées peuvent tenir sur une page donnée
+     * Page 2+ ont plus d'espace car pas de titre "TABLE DES MATIÈRES"
+     * Basé sur les dimensions CSS réelles
+     */
+    private function calculatePageCapacity(int $startIndex): int
+    {
+        $totalEntries = count($this->tocEntries);
+
+        // Espace disponible page 2+ : 980px (pas de titre)
+        $availableHeight = 980; // pixels
+        $currentHeight = 0;
+        $entryCount = 0;
+
+        for ($i = $startIndex; $i < $totalEntries; $i++) {
+            $entry = $this->tocEntries[$i];
+            $entryHeight = $entry['level'] === 'TITRE1' ? 28 : 18;
+
+            if ($currentHeight + $entryHeight <= $availableHeight) {
+                $currentHeight += $entryHeight;
+                $entryCount++;
+            } else {
+                break;
+            }
+        }
+
+        return $entryCount;
+    }
+
+    /**
      * Calculer combien d'entrées peuvent tenir sur la première page
-     * Approche optimiste qui maximise l'utilisation de l'espace
+     * Stratégie : REMPLIR AU MAXIMUM la page 1 avant de passer à la page 2
+     * Basé sur les dimensions CSS réelles
      */
     private function calculateFirstPageEntries(): int
     {
         $totalEntries = count($this->tocEntries);
-        
-        // Approche progressive: on teste différents pourcentages
-        // pour trouver la répartition optimale
-        $testRatios = [0.65, 0.70, 0.75, 0.60, 0.55]; // Commencer par 65% sur la première page
-        
-        foreach ($testRatios as $ratio) {
-            $firstPageCount = (int)round($totalEntries * $ratio);
-            
-            // S'assurer qu'on a au moins 2 entrées sur chaque page
-            if ($firstPageCount >= 2 && ($totalEntries - $firstPageCount) >= 2) {
-                return $firstPageCount;
+
+        // Dimensions réelles basées sur styles.css :
+        // - Hauteur page : 297mm ≈ 1120px
+        // - toc-container : top 80px, bottom 60px → espace = 980px
+        // - toc-title : 35px + margin 25px = 60px
+        // - Espace disponible page 1 : 980px - 60px = 920px
+
+        // Hauteur par type d'entrée (basé sur CSS) :
+        // - TITRE1 : font 18px + margin 10px = 28px
+        // - TITRE2 : font 12px + margin 6px = 18px
+
+        $availableHeight = 920; // pixels
+        $currentHeight = 0;
+        $entryCount = 0;
+
+        foreach ($this->tocEntries as $entry) {
+            $entryHeight = $entry['level'] === 'TITRE1' ? 28 : 18;
+
+            // Vérifier si on peut encore ajouter cette entrée
+            if ($currentHeight + $entryHeight <= $availableHeight) {
+                $currentHeight += $entryHeight;
+                $entryCount++;
+            } else {
+                // On a atteint la capacité max de la page
+                break;
             }
         }
-        
-        // Fallback : répartition simple 60/40
-        $firstPageCount = (int)ceil($totalEntries * 0.6);
-        
-        // S'assurer qu'on ne dépasse pas les limites
-        return max(2, min($firstPageCount, $totalEntries - 2));
+
+        // Si toutes les entrées rentrent, retourner le total
+        if ($entryCount >= $totalEntries) {
+            return $totalEntries;
+        }
+
+        // Sinon retourner ce qui rentre (avec minimum de sécurité)
+        return max(3, $entryCount);
     }
 
     /**
-     * Générer les pages supplémentaires de la TOC (désactivé - TOC naturelle)
+     * Générer les pages supplémentaires de la TOC (si plus de 2 pages nécessaires)
+     * Retourne un tableau de HTML pour les pages 3, 4, etc.
+     * Stratégie : REMPLIR AU MAXIMUM chaque page avant de passer à la suivante
      */
     public function generateAdditionalPages(): array
     {
-        return []; // Plus de pages supplémentaires - la TOC continue naturellement
+        if (empty($this->tocEntries)) {
+            return [];
+        }
+
+        $firstPageEntries = $this->calculateFirstPageEntries();
+        $page2Entries = $this->calculatePageCapacity($firstPageEntries);
+        $totalEntries = count($this->tocEntries);
+
+        // Si tout tient en 2 pages, pas besoin de pages supplémentaires
+        if ($firstPageEntries + $page2Entries >= $totalEntries) {
+            return [];
+        }
+
+        // Générer les pages 3, 4, 5, etc.
+        $additionalPages = [];
+        $currentIndex = $firstPageEntries + $page2Entries;
+
+        while ($currentIndex < $totalEntries) {
+            // Calculer combien d'entrées peuvent tenir sur cette page
+            $pageCapacity = $this->calculatePageCapacity($currentIndex);
+            $endIndex = min($currentIndex + $pageCapacity, $totalEntries);
+
+            $pageHtml = '<div class="toc-container page-container">';
+
+            for ($i = $currentIndex; $i < $endIndex; $i++) {
+                $entry = $this->tocEntries[$i];
+                $class = $entry['level'] === 'TITRE1' ? 'toc-entry-level1' : 'toc-entry-level2';
+
+                $pageHtml .= '<div class="' . $class . '">';
+
+                if (!empty($entry['anchor'])) {
+                    $pageHtml .= '<a href="#' . $entry['anchor'] . '" class="toc-link">';
+                    $pageHtml .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+                    $pageHtml .= '</a>';
+                } else {
+                    $pageHtml .= '<span class="toc-entry-title">' . htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8') . '</span>';
+                }
+
+                $pageHtml .= '<span class="toc-dots"></span>';
+                $pageHtml .= '<span class="toc-page">' . $entry['page'] . '</span>';
+                $pageHtml .= '</div>';
+            }
+
+            $pageHtml .= '</div>';
+            $additionalPages[] = $pageHtml;
+
+            // Passer à la page suivante
+            $currentIndex = $endIndex;
+        }
+
+        return $additionalPages;
     }
 
     /**
