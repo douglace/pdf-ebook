@@ -883,3 +883,15 @@ html, body {
     text-align: justify;
     margin-bottom: 8px;
 }
+
+/* ===== NUMÉROTATION DES PAGES ===== */
+.page-number {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-family: 'Quicksand', sans-serif;
+    font-size: 18px;
+    font-weight: normal;
+    color: rgb(100, 100, 100);
+    z-index: 1000;
+}

@@ -37,6 +37,11 @@ try {
     echo "      - Nettoyage des pages vides...\n";
     $html = HtmlCleaner::removeEmptyPages($html);
     echo "      ✓ Pages vides supprimées\n";
+    
+    // Ajouter la numérotation des pages
+    echo "      - Ajout de la numérotation des pages...\n";
+    $html = HtmlCleaner::addPageNumbers($html);
+    echo "      ✓ Numérotation ajoutée\n";
 
     // Optionnel: sauvegarder le HTML pour debug
     if (!is_dir(PROJECT_ROOT . '/output')) {
