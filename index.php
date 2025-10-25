@@ -60,7 +60,19 @@ try {
     echo "[3/3] Génération du PDF avec toutes les pages...\n";
     echo "      (Cela peut prendre quelques secondes...)\n";
     $pdfGenerator = new PdfGenerator(PROJECT_ROOT);
-    $pdfPath = $pdfGenerator->generateFromHtml($html, 'smartbook_' . $coverData['id']);
+    // Fonction pour nettoyer le nom de fichier (supprimer accents et caractères spéciaux)
+    $cleanTitle = function($text) {
+        // Supprimer les accents
+        $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        // Convertir en majuscules
+        $text = strtoupper($text);
+        // Remplacer les espaces et caractères spéciaux par des tirets
+        $text = preg_replace('/[^A-Z0-9]+/', '-', $text);
+        // Supprimer les tirets en début/fin
+        return trim($text, '-');
+    };
+    
+    $pdfPath = $pdfGenerator->generateFromHtml($html, $coverData['id']."-".$cleanTitle($coverData['title']));
     echo "      ✓ PDF généré avec succès\n\n";
 
     // Résultat

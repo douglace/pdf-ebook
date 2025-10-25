@@ -42,6 +42,9 @@ class PdfGenerator
 
             // Détecter et configurer les chemins Node.js
             $this->configureNodePaths($browsershot);
+            
+            // Essayer d'utiliser Chrome système si disponible
+            $this->configureChromePath($browsershot);
 
             $browsershot->save($pdfPath);
 
@@ -167,6 +170,44 @@ class PdfGenerator
         }
     }
 
+    /**
+     * Configurer le chemin de Chrome/Chromium pour Browsershot
+     * Essaie d'utiliser Chrome système si Puppeteer n'est pas disponible
+     */
+    private function configureChromePath($browsershot): void
+    {
+        $possibleChromePaths = [];
+        
+        if (PHP_OS_FAMILY === 'Windows') {
+            $possibleChromePaths = [
+                'C:\Program Files\Google\Chrome\Application\chrome.exe',
+                'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+                'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+            ];
+        } else {
+            // Chemins Linux/Unix
+            $possibleChromePaths = [
+                '/usr/bin/google-chrome',
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+                '/snap/bin/chromium',
+                '/opt/google/chrome/chrome',
+                '/usr/local/bin/chrome',
+                trim(shell_exec('which google-chrome 2>/dev/null') ?: ''),
+                trim(shell_exec('which chromium-browser 2>/dev/null') ?: ''),
+                trim(shell_exec('which chromium 2>/dev/null') ?: '')
+            ];
+        }
+
+        foreach ($possibleChromePaths as $path) {
+            if (!empty($path) && file_exists($path) && is_executable($path)) {
+                $browsershot->setChromePath($path);
+                error_log("PdfGenerator - Chrome trouvé: " . $path);
+                break;
+            }
+        }
+    }
 
     /**
      * Obtenir le chemin du dossier output
