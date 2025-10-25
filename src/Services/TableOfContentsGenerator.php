@@ -254,6 +254,10 @@ class TableOfContentsGenerator
     {
         $currentPage = 4; // Commencer après couverture, licence et TOC
         
+        if($this->extractIntroductionFromData($data, $currentPage)) {
+            $currentPage++;
+        }
+
         // Ajouter l'introduction (chapitre 0) en premier
         if (isset($data['tdm']['chapters'])) {
             foreach ($data['tdm']['chapters'] as $chapter) {
@@ -311,6 +315,37 @@ class TableOfContentsGenerator
         $this->addEntry('WIKIPEDIA', 'TITRE1', ++$currentPage, 'wikipedia');
         $this->addEntry('SITES WEB', 'TITRE1', ++$currentPage, 'websites');
         $this->addEntry('SUGGESTIONS', 'TITRE1', ++$currentPage, 'suggestions');
+    }
+
+    public function extractIntroductionFromData(array $data, int $currentPage): bool
+    {
+        $foundIntroduction = false;
+        foreach ($data['tdm']['chapters'] as $chapter) {
+            $chapterNumber = $chapter['numero_chapter'] ?? '';
+            $chapterTitle = $chapter['chapter'] ?? '';
+            
+            if ($chapterNumber === '0') {
+                $this->addEntry('INTRODUCTION - ' . $chapterTitle, 'TITRE1', $currentPage, 'introduction');
+                $foundIntroduction = true;
+                break;
+            }
+        }
+
+        if (!$foundIntroduction) {
+            if (isset($data['chapters']['chapters'])) {
+                foreach ($data['chapters']['chapters'] as $chapter) {
+                    $chapterNumber = $chapter['chapter_info_title']['numero_chapter'] ?? '';
+                    $chapterTitle = $chapter['chapter_info_title']['chapter'] ?? '';
+                    
+                    if ($chapterNumber === '0') {
+                        $this->addEntry('INTRODUCTION - ' . $chapterTitle, 'TITRE1', $currentPage, 'introduction');
+                        $foundIntroduction = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return $foundIntroduction;
     }
 
     /**
