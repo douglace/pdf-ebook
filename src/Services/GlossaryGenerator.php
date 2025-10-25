@@ -163,12 +163,14 @@ class GlossaryGenerator
     {
         $title = 'GLOSSAIRE';
 
-        $html = '<a id="glossaire" name="glossaire"></a>';
-        $html .= '<div class="glossary-container page-container">';
+        // Pas besoin d'ancre ici car le template ebook.html a déjà id="glossary" sur la div page
+        $html = '<div class="glossary-container page-container">';
         $html .= '<h1 class="glossary-title page-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>';
 
         return $html;
     }
+
+    
 
     /**
      * Wrap glossary page content with proper container

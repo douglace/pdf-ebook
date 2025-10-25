@@ -106,7 +106,6 @@ class HtmlCleaner
                     if ($titleSpan->length > 0) {
                         $title = trim($titleSpan->item(0)->textContent);
                         if (stripos($title, $tocTitle) !== false) {
-                            echo "Debug cleanTOC: Suppression de l'entrée TOC '$title'\n";
                             $entry->parentNode->removeChild($entry);
                             break;
                         }
@@ -133,10 +132,17 @@ class HtmlCleaner
 
         // Étape 1 : Parcourir toutes les pages et mapper les ancres avec leurs numéros de page
         $anchorToPageMap = [];
-        $pages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' page ')]");
+        // Exclure page-number, ne garder que les vraies pages (divs avec class contenant " page " mais pas "page-number")
+        $pages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' page ') and not(contains(@class, 'page-number'))]");
         $pageNumber = 1;
 
         foreach ($pages as $page) {
+            // Vérifier si la page elle-même a un ID
+            $pageId = $page->getAttribute('id');
+            if (!empty($pageId)) {
+                $anchorToPageMap[$pageId] = $pageNumber;
+            }
+
             // Trouver tous les éléments avec un ID (ancres) dans cette page
             $anchors = $xpath->query(".//*[@id]", $page);
 
@@ -201,7 +207,7 @@ class HtmlCleaner
                     if ($sectionPages->length > 0) {
                         // Compter à quelle position se trouve cette page
                         $targetPage = $sectionPages->item(0);
-                        $allPages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' page ')]");
+                        $allPages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' page ') and not(contains(@class, 'page-number'))]");
 
                         for ($i = 0; $i < $allPages->length; $i++) {
                             if ($allPages->item($i)->isSameNode($targetPage)) {

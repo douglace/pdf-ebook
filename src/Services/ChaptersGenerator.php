@@ -100,7 +100,7 @@ class ChaptersGenerator
         // - subchapter-title (h2) : font 14px × line-height 1.4 + margin-top 15px + margin-bottom 10px = 45px
         // - paragraph : font 12px × line-height 1.5 + margin-bottom 12px = 30px par ligne estimée
 
-        $safetyMargin = 30; // pixels de marge de sécurité
+        $safetyMargin = 60; // pixels de marge de sécurité
         $maxPageHeight = 980 - $safetyMargin; // 950px disponibles
 
         $chapterTitleHeight = 41; // pixels
