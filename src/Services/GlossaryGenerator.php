@@ -80,7 +80,7 @@ class GlossaryGenerator
 
         // Capacité estimée par page (en caractères)
         // Page 1 a moins d'espace car elle contient le titre
-        $maxLengthPage1 = 2500;  // ~2500 caractères pour la première page
+        $maxLengthPage1 = 3500;  // ~2500 caractères pour la première page
         $maxLengthOtherPages = 4000;  // ~4000 caractères pour les autres pages
 
         // Marge de sécurité pour éviter les débordements (85% de la capacité max)

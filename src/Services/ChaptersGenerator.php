@@ -101,7 +101,8 @@ class ChaptersGenerator
         // - paragraph : font 12px × line-height 1.5 + margin-bottom 12px = 30px par ligne estimée
 
         $safetyMargin = 60; // pixels de marge de sécurité
-        $maxPageHeight = 980 - $safetyMargin; // 950px disponibles
+        $maxPageHeight = 980 - $safetyMargin; // 920px disponibles
+        $paragraphBottomSafety = 100; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas
 
         $chapterTitleHeight = 41; // pixels
         $subchapterTitleHeight = 45; // pixels
@@ -159,9 +160,11 @@ class ChaptersGenerator
                     $estimatedLines = max(1, ceil(strlen($paragraph) / 80));
                     $paragraphHeight = ($estimatedLines * $paragraphLineHeight) + $paragraphMargin;
 
-                    // Vérifier si le paragraphe rentre sur la page actuelle
-                    if ($currentPageHeight + $paragraphHeight > $maxPageHeight && $currentPageHeight > 0) {
-                        // Le paragraphe ne rentre pas, créer une nouvelle page
+                    // Vérifier si le paragraphe rentre sur la page actuelle avec la marge de sécurité supplémentaire
+                    // Si ajouter ce paragraphe ferait qu'il arrive à moins de $paragraphBottomSafety pixels du bas,
+                    // on le met sur une nouvelle page
+                    if ($currentPageHeight + $paragraphHeight + $paragraphBottomSafety > $maxPageHeight && $currentPageHeight > 0) {
+                        // Le paragraphe arriverait trop près du bas, créer une nouvelle page
                         $currentPageHtml .= '</div>'; // Close chapter-container
                         $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
 
