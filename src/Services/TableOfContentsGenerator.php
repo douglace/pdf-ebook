@@ -119,7 +119,9 @@ class TableOfContentsGenerator
         $totalEntries = count($this->tocEntries);
 
         // Espace disponible page 2+ : 980px (pas de titre)
-        $availableHeight = 980; // pixels
+        // Marge de sécurité pour éviter les coupures en bas de page
+        $safetyMargin = 130; // pixels
+        $availableHeight = 980 - $safetyMargin; // pixels
         $currentHeight = 0;
         $entryCount = 0;
 
@@ -157,7 +159,9 @@ class TableOfContentsGenerator
         // - TITRE1 : font 18px + margin 10px = 28px
         // - TITRE2 : font 12px + margin 6px = 18px
 
-        $availableHeight = 920; // pixels
+        // Marge de sécurité pour éviter les coupures en bas de page
+        $safetyMargin = 130; // pixels
+        $availableHeight = 920 - $safetyMargin; // pixels
         $currentHeight = 0;
         $entryCount = 0;
 
