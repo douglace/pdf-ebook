@@ -7,7 +7,7 @@ namespace Vex6\Phppdf\Models;
  */
 class EbookData
 {
-    private array $data;
+    protected array $data;
 
     // Tables de correspondance des catégories
     private const CAT_COLOR = [
@@ -50,18 +50,39 @@ class EbookData
         "Others" => "Autres"
     ];
 
-    public function __construct(string $jsonPath)
+    /**
+     * Constructeur qui accepte soit un chemin de fichier JSON, soit une chaîne JSON, soit un tableau
+     *
+     * @param string|array $jsonPathOrData Chemin vers un fichier JSON, chaîne JSON, ou tableau de données
+     * @throws \Exception Si le JSON est invalide ou le fichier introuvable
+     */
+    public function __construct($jsonPathOrData)
     {
-        if (!file_exists($jsonPath)) {
-            throw new \Exception("Le fichier JSON n'existe pas: {$jsonPath}");
+        // Cas 1: Tableau de données déjà décodé
+        if (is_array($jsonPathOrData)) {
+            $this->data = $jsonPathOrData;
+            return;
         }
 
-        $jsonContent = file_get_contents($jsonPath);
-        $this->data = json_decode($jsonContent, true);
+        // Cas 2: Chaîne qui pourrait être un chemin de fichier ou du JSON
+        if (is_string($jsonPathOrData)) {
+            // Vérifier si c'est un chemin de fichier valide
+            if (file_exists($jsonPathOrData)) {
+                $jsonContent = file_get_contents($jsonPathOrData);
+            } else {
+                // Sinon, traiter comme une chaîne JSON directe
+                $jsonContent = $jsonPathOrData;
+            }
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception("Erreur lors du parsing du JSON: " . json_last_error_msg());
+            $this->data = json_decode($jsonContent, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Erreur lors du parsing du JSON: " . json_last_error_msg());
+            }
+            return;
         }
+
+        throw new \Exception("Le paramètre doit être un chemin de fichier, une chaîne JSON ou un tableau");
     }
 
     /**
