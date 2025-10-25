@@ -39,9 +39,9 @@ class HtmlCleaner
         libxml_use_internal_errors(true);
         $dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
-        
+
         $xpath = new \DOMXPath($dom);
-        
+
         // Exclure la page de couverture et les pages TOC
         $pages = $xpath->query("
             //div[contains(concat(' ', normalize-space(@class), ' '), ' page ')
@@ -51,9 +51,9 @@ class HtmlCleaner
         ");
 
         $pageNumber = 1;
-        
+
         foreach ($pages as $page) {
-            $classes = explode(' ', $page->getAttribute('class'));	
+            $classes = explode(' ', $page->getAttribute('class'));
             if (in_array('toc-page', $classes) || in_array('cover-page', $classes)) {
                 $pageNumber++;
                 continue;
@@ -62,13 +62,122 @@ class HtmlCleaner
             $pageNumDiv = $dom->createElement('div');
             $pageNumDiv->setAttribute('class', 'page-number');
             $pageNumDiv->textContent = $pageNumber;
-            
+
             // Ajouter à la fin de la page
             $page->appendChild($pageNumDiv);
-            
+
             $pageNumber++;
         }
-        
+
+        return $dom->saveHTML();
+    }
+
+    /**
+     * Mettre à jour la numérotation de la TOC avec les vrais numéros de page
+     * basés sur les ancres trouvées dans le HTML généré
+     */
+    public static function updateTOCPageNumbers(string $html): string
+    {
+        $dom = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $xpath = new \DOMXPath($dom);
+
+        // Étape 1 : Parcourir toutes les pages et mapper les ancres avec leurs numéros de page
+        $anchorToPageMap = [];
+        $pages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' page ')]");
+        $pageNumber = 1;
+
+        foreach ($pages as $page) {
+            // Trouver tous les éléments avec un ID (ancres) dans cette page
+            $anchors = $xpath->query(".//*[@id]", $page);
+
+            foreach ($anchors as $anchor) {
+                $anchorId = $anchor->getAttribute('id');
+                if (!empty($anchorId)) {
+                    $anchorToPageMap[$anchorId] = $pageNumber;
+                }
+            }
+
+            $pageNumber++;
+        }
+
+        // Étape 2 : Mettre à jour les numéros de page dans la TOC
+        // Trouver tous les liens TOC avec href="#..."
+        $tocLinks = $xpath->query("//div[contains(@class, 'toc-entry-')]//a[@href]");
+
+        foreach ($tocLinks as $link) {
+            $href = $link->getAttribute('href');
+
+            // Extraire l'ancre (enlever le #)
+            if (strpos($href, '#') === 0) {
+                $anchorId = substr($href, 1);
+
+                // Si on a trouvé cette ancre dans notre mapping
+                if (isset($anchorToPageMap[$anchorId])) {
+                    $correctPageNumber = $anchorToPageMap[$anchorId];
+
+                    // Trouver l'élément parent qui contient le numéro de page
+                    $parentEntry = $link->parentNode;
+                    $pageSpans = $xpath->query(".//span[@class='toc-page']", $parentEntry);
+
+                    if ($pageSpans->length > 0) {
+                        $pageSpan = $pageSpans->item(0);
+                        $pageSpan->textContent = $correctPageNumber;
+                    }
+                }
+            }
+        }
+
+        // Étape 3 : Gérer les entrées TOC sans lien (GLOSSAIRE, etc.)
+        // Pour ces cas, on cherche directement par titre ou on utilise une logique spéciale
+        $tocEntriesWithoutLink = $xpath->query("//div[contains(@class, 'toc-entry-')]//span[@class='toc-entry-title' and not(parent::a)]");
+
+        foreach ($tocEntriesWithoutLink as $titleSpan) {
+            $title = trim($titleSpan->textContent);
+
+            // Mapping spécial pour les sections sans ancre
+            $specialMapping = [
+                'GLOSSAIRE' => 'glossary-page',
+                'QUIZ' => 'quiz',
+                'WIKIPEDIA' => 'wikipedia',
+                'SITES WEB' => 'websites',
+                'SUGGESTIONS' => 'suggestions'
+            ];
+
+            foreach ($specialMapping as $tocTitle => $searchTerm) {
+                if (stripos($title, $tocTitle) !== false) {
+                    // Chercher la page contenant cette section
+                    $sectionPages = $xpath->query("//div[contains(@class, 'page') and contains(@id, '$searchTerm')]");
+
+                    if ($sectionPages->length > 0) {
+                        // Compter à quelle position se trouve cette page
+                        $targetPage = $sectionPages->item(0);
+                        $allPages = $xpath->query("//div[contains(@class, 'page')]");
+
+                        for ($i = 0; $i < $allPages->length; $i++) {
+                            if ($allPages->item($i)->isSameNode($targetPage)) {
+                                $correctPageNumber = $i + 1;
+
+                                // Mettre à jour le numéro de page
+                                $parentEntry = $titleSpan->parentNode;
+                                $pageSpans = $xpath->query(".//span[@class='toc-page']", $parentEntry);
+
+                                if ($pageSpans->length > 0) {
+                                    $pageSpan = $pageSpans->item(0);
+                                    $pageSpan->textContent = $correctPageNumber;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         return $dom->saveHTML();
     }
 }

@@ -37,7 +37,12 @@ try {
     echo "      - Nettoyage des pages vides...\n";
     $html = HtmlCleaner::removeEmptyPages($html);
     echo "      ✓ Pages vides supprimées\n";
-    
+
+    // Mettre à jour la numérotation de la TOC avec les vrais numéros de page
+    echo "      - Mise à jour de la numérotation de la TOC...\n";
+    $html = HtmlCleaner::updateTOCPageNumbers($html);
+    echo "      ✓ TOC mise à jour avec les vrais numéros de page\n";
+
     // Ajouter la numérotation des pages
     echo "      - Ajout de la numérotation des pages...\n";
     $html = HtmlCleaner::addPageNumbers($html);
