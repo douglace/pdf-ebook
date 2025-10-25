@@ -5,6 +5,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Vex6\Phppdf\Models\EbookData;
 use Vex6\Phppdf\Services\EbookGenerator;
 use Vex6\Phppdf\Services\PdfGenerator;
+use Vex6\Phppdf\Services\HtmlCleaner;
 
 // Configuration
 define('PROJECT_ROOT', __DIR__);
@@ -31,6 +32,11 @@ try {
     echo "[2/3] Génération du HTML de l'ebook (Pages: Couverture + Licence + TOC + Introduction)...\n";
     $ebookGenerator = new EbookGenerator(PROJECT_ROOT);
     $html = $ebookGenerator->generate($ebookData, time());
+    
+    // Nettoyer le HTML en supprimant les pages vides
+    echo "      - Nettoyage des pages vides...\n";
+    $html = HtmlCleaner::removeEmptyPages($html);
+    echo "      ✓ Pages vides supprimées\n";
 
     // Optionnel: sauvegarder le HTML pour debug
     if (!is_dir(PROJECT_ROOT . '/output')) {
