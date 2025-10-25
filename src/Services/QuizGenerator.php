@@ -10,87 +10,53 @@ use Vex6\Phppdf\Models\EbookData;
 class QuizGenerator
 {
     /**
-     * Extraire le contenu du quiz depuis le formatted_text
+     * Extraire le contenu du quiz depuis la section quiz du JSON
      */
     public function extractQuizContent(EbookData $ebookData): ?array
     {
         $rawData = $ebookData->getRawData();
-        $formattedText = $rawData['formatted_text'] ?? '';
+        $quizData = $rawData['quiz'] ?? null;
 
-        if (empty($formattedText)) {
+        if (empty($quizData) || empty($quizData['questions'])) {
             return null;
         }
 
-        $lines = explode("\n", $formattedText);
-        $quizContent = [];
-        $collectingQuiz = false;
-        $currentQuestion = null;
-        $answerLine = '';
+        $quizContent = [
+            'questions' => []
+        ];
 
-        foreach ($lines as $lineIndex => $line) {
-            $line = trim($line);
+        // Convertir la structure JSON en format attendu par generateQuizHtml
+        foreach ($quizData['questions'] as $questionData) {
+            $question = [
+                'question' => $this->cleanTextEncoding($questionData['question']),
+                'answers' => []
+            ];
 
-            // Détecter le début du quiz (TITRE1 contenant "QUIZ")
-            if (preg_match('/^\[TITRE1\].*QUIZ/i', $line)) {
-                $collectingQuiz = true;
-                continue;
+            // Trier les choix par numero_answer pour avoir l'ordre correct
+            $choices = $questionData['choices'];
+            usort($choices, function($a, $b) {
+                return intval($a['numero_answer']) - intval($b['numero_answer']);
+            });
+
+            // Convertir les choix en réponses avec lettres
+            $letters = ['a', 'b', 'c', 'd'];
+            $letterIndex = 0;
+            
+            foreach ($choices as $choice) {
+                if ($letterIndex < count($letters)) {
+                    $question['answers'][] = [
+                        'letter' => $letters[$letterIndex],
+                        'text' => $this->cleanTextEncoding($choice['answer']),
+                        'isCorrect' => $choice['good'] ?? false
+                    ];
+                    $letterIndex++;
+                }
             }
 
-            // Si on collecte le quiz
-            if ($collectingQuiz) {
-                // Arrêter si on rencontre un nouveau TITRE1 (mais pas QUIZ)
-                if (preg_match('/^\[TITRE1\]/', $line) && !preg_match('/QUIZ/i', $line)) {
-                    break;
-                }
-
-                // Détecter une entrée de quiz (question)
-                if (preg_match('/^\[ENTREE_QUIZ\]\s*(.+)$/i', $line, $matches)) {
-                    // Sauvegarder la question précédente si elle existe
-                    if ($currentQuestion !== null) {
-                        $quizContent['questions'][] = $currentQuestion;
-                    }
-
-                    // Nouvelle question
-                    $currentQuestion = [
-                        'question' => $this->cleanTextEncoding(trim($matches[1])),
-                        'answers' => []
-                    ];
-                    continue;
-                }
-
-                // Détecter les réponses (lignes NORMAL après ENTREE_QUIZ)
-                if ($currentQuestion !== null && preg_match('/^\[NORMAL\]\s*([a-d])\s*[-–]\s*(.+)$/i', $line, $matches)) {
-                    $currentQuestion['answers'][] = [
-                        'letter' => strtolower(trim($matches[1])),
-                        'text' => $this->cleanTextEncoding(trim($matches[2]))
-                    ];
-                    continue;
-                }
-
-                // Détecter la section REPONSES
-                if (preg_match('/^\[NORMAL\]\s*REPONSES\s*$/i', $line)) {
-                    // La ligne suivante contient les réponses
-                    if (isset($lines[$lineIndex + 1])) {
-                        $nextLine = trim($lines[$lineIndex + 1]);
-                        if (preg_match('/^\[NORMAL\]\s*(.+)$/i', $nextLine, $matches)) {
-                            $answerLine = $this->cleanTextEncoding(trim($matches[1]));
-                        }
-                    }
-                }
-            }
+            $quizContent['questions'][] = $question;
         }
 
-        // Ajouter la dernière question
-        if ($currentQuestion !== null) {
-            $quizContent['questions'][] = $currentQuestion;
-        }
-
-        // Ajouter la ligne de réponses
-        if (!empty($answerLine)) {
-            $quizContent['answers'] = $answerLine;
-        }
-
-        return !empty($quizContent) ? $quizContent : null;
+        return $quizContent;
     }
 
     /**
@@ -102,6 +68,8 @@ class QuizGenerator
         if (empty($quizContent) || empty($quizContent['questions'])) {
             return [];
         }
+
+        
 
         $pages = [];
         $currentPageHtml = '';
@@ -194,8 +162,9 @@ class QuizGenerator
         // Supprimer les caractères de remplacement UTF-8 ()
         $text = str_replace('', '', $text);
         
-        // Supprimer les caractères de contrôle et non imprimables
-        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x80-\x9F]/', '', $text);
+        // Supprimer seulement les caractères de contrôle vraiment problématiques
+        // (pas les caractères UTF-8 valides dans la plage 80-9F)
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $text);
         
         // Supprimer les caractères Unicode problématiques
         $text = preg_replace('/[\x{FFFD}]/u', '', $text);
