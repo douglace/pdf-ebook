@@ -43,11 +43,21 @@ class HtmlCleaner
         $xpath = new \DOMXPath($dom);
         
         // Exclure la page de couverture et les pages TOC
-        $pages = $xpath->query("//div[@class='page'][not(contains(., 'cover-title')) and not(contains(., 'TOC_CONTENT'))]");
-        
+        $pages = $xpath->query("
+            //div[contains(concat(' ', normalize-space(@class), ' '), ' page ')
+                and not(contains(., 'cover-title'))
+                and not(contains(., 'TOC_CONTENT'))
+            ]
+        ");
+
         $pageNumber = 1;
         
         foreach ($pages as $page) {
+            $classes = explode(' ', $page->getAttribute('class'));	
+            if (in_array('toc-page', $classes) || in_array('cover-page', $classes)) {
+                $pageNumber++;
+                continue;
+            }
             // Créer l'élément de numérotation
             $pageNumDiv = $dom->createElement('div');
             $pageNumDiv->setAttribute('class', 'page-number');
