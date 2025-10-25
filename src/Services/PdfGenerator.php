@@ -10,6 +10,7 @@ use Spatie\Browsershot\Browsershot;
 class PdfGenerator
 {
     private string $outputPath;
+    private string $tempPath;
 
     public function __construct(string $projectRoot)
     {
@@ -19,6 +20,15 @@ class PdfGenerator
         if (!is_dir($this->outputPath)) {
             mkdir($this->outputPath, 0755, true);
         }
+        
+        // Créer un dossier temporaire dans le projet
+        $this->tempPath = $projectRoot . '/temp';
+        if (!is_dir($this->tempPath)) {
+            mkdir($this->tempPath, 0755, true);
+        }
+        
+        // Configurer le dossier temporaire système pour cette session
+        $this->configureSystemTemp();
     }
 
     /**
@@ -38,7 +48,18 @@ class PdfGenerator
                 ->landscape(false) // Portrait
                 ->margins(0, 0, 0, 0) // Pas de marges
                 ->showBackground() // Imprimer les arrière-plans
-                ->waitUntilNetworkIdle(); // Attendre que toutes les ressources soient chargées
+                ->waitUntilNetworkIdle() // Attendre que toutes les ressources soient chargées
+                ->addChromiumArguments([
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--allow-file-access-from-files'
+                ]);
 
             // Détecter et configurer les chemins Node.js
             $this->configureNodePaths($browsershot);
@@ -56,6 +77,29 @@ class PdfGenerator
 
         } catch (\Exception $e) {
             throw new \Exception("Erreur lors de la génération du PDF: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Configurer le dossier temporaire système
+     */
+    private function configureSystemTemp(): void
+    {
+        // Définir le dossier temporaire pour cette session
+        putenv('TMPDIR=' . $this->tempPath);
+        putenv('TMP=' . $this->tempPath);
+        putenv('TEMP=' . $this->tempPath);
+        
+        // Créer un lien symbolique si possible (Linux/Unix)
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $systemTemp = sys_get_temp_dir();
+            if ($systemTemp === '/tmp' && is_writable($systemTemp)) {
+                // Essayer de créer un lien symbolique vers notre dossier
+                $linkPath = $this->tempPath . '/browsershot';
+                if (!file_exists($linkPath)) {
+                    @symlink($this->tempPath, $linkPath);
+                }
+            }
         }
     }
 
