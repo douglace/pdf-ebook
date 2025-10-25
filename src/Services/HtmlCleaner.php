@@ -73,6 +73,50 @@ class HtmlCleaner
     }
 
     /**
+     * Nettoyer le TOC en supprimant les entrées correspondant aux pages qui n'existent pas
+     */
+    public static function cleanTOC(string $html): string
+    {
+        $dom = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $xpath = new \DOMXPath($dom);
+
+        // Mapping des classes de pages vers les titres TOC
+        $pageToTOCMapping = [
+            'sites-web-page' => 'SITES WEB',
+            'suggestions-page' => 'SUGGESTIONS', 
+            'wikipedia-page' => 'WIKIPEDIA',
+            'glossary-page' => 'GLOSSAIRE'
+        ];
+
+        foreach ($pageToTOCMapping as $pageClass => $tocTitle) {
+            // Vérifier si la page existe
+            $pageExists = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' $pageClass ')]")->length > 0;
+            
+            if (!$pageExists) {
+                // Supprimer l'entrée TOC correspondante
+                $tocEntries = $xpath->query("//div[contains(@class, 'toc-entry-')]");
+                
+                foreach ($tocEntries as $entry) {
+                    $titleSpan = $xpath->query(".//span[@class='toc-entry-title']", $entry);
+                    if ($titleSpan->length > 0) {
+                        $title = trim($titleSpan->item(0)->textContent);
+                        if (stripos($title, $tocTitle) !== false) {
+                            $entry->parentNode->removeChild($entry);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $dom->saveHTML();
+    }
+
+    /**
      * Mettre à jour la numérotation de la TOC avec les vrais numéros de page
      * basés sur les ancres trouvées dans le HTML généré
      */

@@ -27,17 +27,26 @@ class GlossaryGenerator
         }
 
         $results = [];
+        $seenEntries = []; // Pour éviter les doublons
+        
         foreach ($glossaryEntries as $entry) {
             $acronym = $entry['acronym'] ?? '';
             $definition = $entry['definition'] ?? '';
             $detail = $entry['detail'] ?? '';
 
             if (!empty($acronym) || !empty($definition)) {
-                $results[] = [
-                    'acronym' => $acronym,
-                    'definition' => $definition,
-                    'detail' => $detail
-                ];
+                // Créer une clé unique pour détecter les doublons
+                $entryKey = strtolower(trim($acronym . '|' . $definition));
+                
+                // Vérifier si cette entrée n'a pas déjà été ajoutée
+                if (!isset($seenEntries[$entryKey])) {
+                    $results[] = [
+                        'acronym' => $acronym,
+                        'definition' => $definition,
+                        'detail' => $detail
+                    ];
+                    $seenEntries[$entryKey] = true;
+                }
             }
         }
 
@@ -78,9 +87,11 @@ class GlossaryGenerator
         $safetyMargin = 0.85;
 
         foreach ($glossaryContent as $index => $entry) {
-            $acronym = htmlspecialchars($entry['acronym'] ?? '', ENT_QUOTES, 'UTF-8');
-            $definition = htmlspecialchars($entry['definition'] ?? '', ENT_QUOTES, 'UTF-8');
-            $detail = htmlspecialchars($entry['detail'] ?? '', ENT_QUOTES, 'UTF-8');
+            // Utiliser ENT_NOQUOTES pour ne pas échapper l'apostrophe, puis échapper manuellement les guillemets doubles
+            $acronym = str_replace('"', '&quot;', htmlspecialchars($entry['acronym'] ?? '', ENT_NOQUOTES, 'UTF-8'));
+            $definition = str_replace('"', '&quot;', htmlspecialchars($entry['definition'] ?? '', ENT_NOQUOTES, 'UTF-8'));
+            $detail = str_replace('"', '&quot;', htmlspecialchars($entry['detail'] ?? '', ENT_NOQUOTES, 'UTF-8'));
+            
 
             // Calculer la longueur estimée de cette entrée (acronym + definition + detail)
             $entryLength = strlen($acronym) + strlen($definition) + strlen($detail);
@@ -201,7 +212,7 @@ class GlossaryGenerator
         $definition = $parts[1] ?? '';
 
         if (!isset($acronymAnchors[$acronym])) {
-            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+            return str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
         }
 
         $anchors = $acronymAnchors[$acronym];
@@ -212,12 +223,12 @@ class GlossaryGenerator
         // Si première occurrence trouvée → lien retour cliquable
         if (isset($firstOccurrenceFound[$acronym])) {
             $linkHtml = '<a href="' . htmlspecialchars($anchors['links']['back'], ENT_QUOTES) . '" style="">' . 
-                       htmlspecialchars($acronym . ' - ' . $definition, ENT_QUOTES) . '</a>';
+                       str_replace('"', '&quot;', htmlspecialchars($acronym . ' - ' . $definition, ENT_NOQUOTES, 'UTF-8')) . '</a>';
 
             return $anchorHtml . $linkHtml;
         } else {
             // Pas de première occurrence → texte simple
-            return $anchorHtml . htmlspecialchars($acronym . ' - ' . $definition, ENT_QUOTES);
+            return $anchorHtml . str_replace('"', '&quot;', htmlspecialchars($acronym . ' - ' . $definition, ENT_NOQUOTES, 'UTF-8'));
         }
     }
 }

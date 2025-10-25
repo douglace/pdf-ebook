@@ -38,6 +38,11 @@ try {
     $html = HtmlCleaner::removeEmptyPages($html);
     echo "      ✓ Pages vides supprimées\n";
 
+    // Nettoyer le TOC en supprimant les entrées des pages inexistantes
+    echo "      - Nettoyage du TOC...\n";
+    $html = HtmlCleaner::cleanTOC($html);
+    echo "      ✓ TOC nettoyé\n";
+
     // Mettre à jour la numérotation de la TOC avec les vrais numéros de page
     echo "      - Mise à jour de la numérotation de la TOC...\n";
     $html = HtmlCleaner::updateTOCPageNumbers($html);
