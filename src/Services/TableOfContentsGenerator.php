@@ -320,7 +320,7 @@ class TableOfContentsGenerator
         }
         
         // Ajouter les sections finales
-        $this->addEntry('GLOSSAIRE', 'TITRE1', ++$currentPage);
+        $this->addEntry('GLOSSAIRE', 'TITRE1', ++$currentPage, 'glossary');
         $this->addEntry('QUIZ', 'TITRE1', ++$currentPage, 'quiz');
         $this->addEntry('WIKIPEDIA', 'TITRE1', ++$currentPage, 'wikipedia');
         $this->addEntry('SITES WEB', 'TITRE1', ++$currentPage, 'websites');
