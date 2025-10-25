@@ -108,8 +108,11 @@ class ChaptersGenerator
         $paragraphLineHeight = 18; // 12px × 1.5 line-height
         $paragraphMargin = 12; // margin-bottom
 
+        // Compteur pour générer des ancres cohérentes avec la TOC
+        $chapterCounter = 1;
+
         foreach ($chaptersContent as $chapter) {
-            $chapterNumber = $chapter['numero'];
+            $originalChapterNumber = $chapter['numero'];
             $chapterTitle = htmlspecialchars($chapter['title'], ENT_QUOTES, 'UTF-8');
 
             // Nouvelle page pour chaque chapitre (TITRE1)
@@ -123,7 +126,8 @@ class ChaptersGenerator
 
             // Commencer une nouvelle page avec le titre du chapitre
             $currentPageHtml .= '<div class="chapter-container page-container">';
-            $anchorId = 'chapter-' . $chapterNumber;
+            // Utiliser le compteur pour générer des ancres cohérentes (1, 2, 3, 4, 5, 6, 7, 8...)
+            $anchorId = 'chapter-' . $chapterCounter;
             $currentPageHtml .= '<h1 id="' . $anchorId . '" class="chapter-title page-title">' . $chapterTitle . '</h1>';
             $currentPageHeight += $chapterTitleHeight;
 
@@ -143,8 +147,8 @@ class ChaptersGenerator
                     $currentPageHeight = 0;
                 }
 
-                // Ajouter le sous-chapitre avec ancre
-                $subchapterAnchorId = 'chapter-' . $chapterNumber . '-subchapter-' . $subchapterNumber;
+                // Ajouter le sous-chapitre avec ancre cohérente
+                $subchapterAnchorId = 'chapter-' . $chapterCounter . '-subchapter-' . $subchapterNumber;
                 $currentPageHtml .= '<h2 id="' . $subchapterAnchorId . '" class="subchapter-title">' . $subchapterTitle . '</h2>';
                 $currentPageHeight += $subchapterTitleHeight;
 
@@ -172,6 +176,9 @@ class ChaptersGenerator
                     $currentPageHeight += $paragraphHeight;
                 }
             }
+            
+            // Incrémenter le compteur pour le prochain chapitre
+            $chapterCounter++;
         }
 
         // Ajouter la dernière page si elle contient du contenu

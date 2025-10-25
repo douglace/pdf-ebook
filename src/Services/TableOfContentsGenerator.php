@@ -120,7 +120,7 @@ class TableOfContentsGenerator
 
         // Espace disponible page 2+ : 980px (pas de titre)
         // Marge de sécurité pour éviter les coupures en bas de page
-        $safetyMargin = 130; // pixels
+        $safetyMargin = 300; // pixels
         $availableHeight = 980 - $safetyMargin; // pixels
         $currentHeight = 0;
         $entryCount = 0;
@@ -160,7 +160,7 @@ class TableOfContentsGenerator
         // - TITRE2 : font 12px + margin 6px = 18px
 
         // Marge de sécurité pour éviter les coupures en bas de page
-        $safetyMargin = 130; // pixels
+        $safetyMargin = 300; // pixels
         $availableHeight = 920 - $safetyMargin; // pixels
         $currentHeight = 0;
         $entryCount = 0;
@@ -249,6 +249,7 @@ class TableOfContentsGenerator
 
     /**
      * Extraire les entrées TOC à partir des données JSON
+     * Utilise la même source de données que ChaptersGenerator pour la cohérence
      */
     public function extractTOCFromData(array $data): void
     {
@@ -258,54 +259,63 @@ class TableOfContentsGenerator
             $currentPage++;
         }
 
-        // Ajouter l'introduction (chapitre 0) en premier
-        if (isset($data['tdm']['chapters'])) {
-            foreach ($data['tdm']['chapters'] as $chapter) {
-                $chapterNumber = $chapter['numero_chapter'] ?? '';
-                $chapterTitle = $chapter['chapter'] ?? '';
-                
-                if ($chapterNumber === '0') {
-                    $this->addEntry('INTRODUCTION - ' . $chapterTitle, 'TITRE1', $currentPage, 'introduction');
-                    $currentPage++;
-                    break;
-                }
-            }
+        // Utiliser la même source de données que ChaptersGenerator (chapters.chapters)
+        $chapters = $data['chapters']['chapters'] ?? [];
+
+        // Debug temporaire
+        error_log("TOC Debug: Nombre de chapitres trouvés: " . count($chapters));
+
+        if (!empty($chapters)) {
+            $chapterCounter = 1; // Compteur pour générer des ancres cohérentes
             
-            // Puis ajouter les chapitres principaux (1, 2, 3, etc.)
-            foreach ($data['tdm']['chapters'] as $chapter) {
-                $chapterNumber = $chapter['numero_chapter'] ?? '';
-                $chapterTitle = $chapter['chapter'] ?? '';
-                
-                // Ignorer les chapitres 0 et -1
-                if ($chapterNumber === '0' || $chapterNumber === '-1') {
+            foreach ($chapters as $chapter) {
+                $chapterInfo = $chapter['chapter_info_title'] ?? [];
+                $numeroChapter = $chapterInfo['numero_chapter'] ?? '';
+                $chapterTitle = $chapterInfo['chapter'] ?? '';
+
+                // Debug temporaire
+                error_log("TOC Debug: Chapitre trouvé - Numéro: '$numeroChapter', Titre: '$chapterTitle'");
+
+                // Ignorer l'introduction (0) et la conclusion (-1) car elles sont gérées séparément
+                if ($numeroChapter === '0' || $numeroChapter === '-1') {
+                    error_log("TOC Debug: Chapitre ignoré (introduction/conclusion)");
                     continue;
                 }
-                
-                $anchorId = 'chapter-' . $chapterNumber;
+
+                // Ajouter le chapitre principal avec ancre cohérente
+                $anchorId = 'chapter-' . $chapterCounter;
+                error_log("TOC Debug: Ajout chapitre - Ancre: '$anchorId', Page: $currentPage");
                 $this->addEntry($chapterTitle, 'TITRE1', $currentPage, $anchorId);
                 $currentPage++;
                 
                 // Ajouter les sous-chapitres
-                if (isset($chapter['subchapter'])) {
-                    foreach ($chapter['subchapter'] as $subchapter) {
-                        $subchapterTitle = $subchapter['subchapter'] ?? '';
-                        $subchapterNumber = $subchapter['numero_subchapter'] ?? '';
-                        $subchapterAnchorId = 'chapter-' . $chapterNumber . '-subchapter-' . $subchapterNumber;
-                        $this->addEntry($subchapterTitle, 'TITRE2', $currentPage, $subchapterAnchorId);
+                if (isset($chapter['subchapters'])) {
+                    foreach ($chapter['subchapters'] as $subchapter) {
+                        $subchapterInfo = $subchapter['subchapter_info_title'] ?? [];
+                        $subchapterTitle = $subchapterInfo['subchapter'] ?? '';
+                        $subchapterNumber = $subchapterInfo['numero_subchapter'] ?? '';
+                        
+                        if (!empty($subchapterTitle)) {
+                            $subchapterAnchorId = 'chapter-' . $chapterCounter . '-subchapter-' . $subchapterNumber;
+                            $this->addEntry($subchapterTitle, 'TITRE2', $currentPage, $subchapterAnchorId);
+                        }
                     }
                 }
+                
+                $chapterCounter++;
             }
-            
-            // Enfin ajouter la conclusion (chapitre -1)
-            foreach ($data['tdm']['chapters'] as $chapter) {
-                $chapterNumber = $chapter['numero_chapter'] ?? '';
-                $chapterTitle = $chapter['chapter'] ?? '';
+        }
+        
+        // Ajouter la conclusion si elle existe
+        foreach ($chapters as $chapter) {
+            $chapterInfo = $chapter['chapter_info_title'] ?? [];
+            $numeroChapter = $chapterInfo['numero_chapter'] ?? '';
+            $chapterTitle = $chapterInfo['chapter'] ?? '';
 
-                if ($chapterNumber === '-1') {
-                    $this->addEntry('CONCLUSION - ' . $chapterTitle, 'TITRE1', $currentPage, 'conclusion');
-                    $currentPage++;
-                    break;
-                }
+            if ($numeroChapter === '-1') {
+                $this->addEntry('CONCLUSION - ' . $chapterTitle, 'TITRE1', $currentPage, 'conclusion');
+                $currentPage++;
+                break;
             }
         }
         

@@ -96,6 +96,7 @@ class HtmlCleaner
             // Vérifier si la page existe
             $pageExists = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' $pageClass ')]")->length > 0;
             
+            
             if (!$pageExists) {
                 // Supprimer l'entrée TOC correspondante
                 $tocEntries = $xpath->query("//div[contains(@class, 'toc-entry-')]");
@@ -105,6 +106,7 @@ class HtmlCleaner
                     if ($titleSpan->length > 0) {
                         $title = trim($titleSpan->item(0)->textContent);
                         if (stripos($title, $tocTitle) !== false) {
+                            echo "Debug cleanTOC: Suppression de l'entrée TOC '$title'\n";
                             $entry->parentNode->removeChild($entry);
                             break;
                         }
@@ -185,21 +187,21 @@ class HtmlCleaner
             // Mapping spécial pour les sections sans ancre
             $specialMapping = [
                 'GLOSSAIRE' => 'glossary-page',
-                'QUIZ' => 'quiz',
-                'WIKIPEDIA' => 'wikipedia',
-                'SITES WEB' => 'websites',
-                'SUGGESTIONS' => 'suggestions'
+                'QUIZ' => 'quiz-page',
+                'WIKIPEDIA' => 'wikipedia-page',
+                'SITES WEB' => 'sites-web-page',
+                'SUGGESTIONS' => 'suggestions-page'
             ];
 
-            foreach ($specialMapping as $tocTitle => $searchTerm) {
+            foreach ($specialMapping as $tocTitle => $pageClass) {
                 if (stripos($title, $tocTitle) !== false) {
-                    // Chercher la page contenant cette section
-                    $sectionPages = $xpath->query("//div[contains(@class, 'page') and contains(@id, '$searchTerm')]");
+                    // Chercher la page contenant cette section par classe
+                    $sectionPages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' $pageClass ')]");
 
                     if ($sectionPages->length > 0) {
                         // Compter à quelle position se trouve cette page
                         $targetPage = $sectionPages->item(0);
-                        $allPages = $xpath->query("//div[contains(@class, 'page')]");
+                        $allPages = $xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' page ')]");
 
                         for ($i = 0; $i < $allPages->length; $i++) {
                             if ($allPages->item($i)->isSameNode($targetPage)) {
