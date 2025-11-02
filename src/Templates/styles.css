@@ -173,15 +173,14 @@ html, body {
 /* Zone de l'image de couverture */
 .cover-image-zone {
     position: absolute;
-    right: 60px;
-    top: 150px;
+    right: 40px;
+    top: 100px;
     width: 550px;
     height: 300px;
 }
 
 .cover-image-zone img {
     width: 100%;
-    max-height: 100%;
     object-fit: cover;
 }
 
@@ -333,7 +332,7 @@ html, body {
     left: 120px;
     bottom:  150px;
     font-family: 'Quicksand', sans-serif;
-    font-size: 12pt;
+    font-size: 9pt;
     color: rgb(30, 30, 30);
     z-index: 2;
 }
@@ -575,7 +574,7 @@ html, body {
     font-size: 28px;
     font-weight: bold;
     color: rgb(0, 0, 0);
-    margin-top: 15px;
+    margin-top: 33px;
     margin-bottom: 33px;
     line-height: 1.4;
     page-break-after: avoid;

@@ -97,7 +97,7 @@ class ChaptersGenerator
 
         // Hauteurs des éléments (basé sur CSS) :
         // - chapter-title (h1) : font 18px × line-height 1.3 + margin-bottom 18px = 41px
-        // - subchapter-title (h2) : font 14px × line-height 1.4 + margin-top 15px + margin-bottom 10px = 45px
+        // - subchapter-title (h2) : font 14px × line-height 1.4 + margin-top 33px + margin-bottom 33px = 81px
         // - paragraph : font 12px × line-height 1.5 + margin-bottom 12px = 30px par ligne estimée
 
         $safetyMargin = 60; // pixels de marge de sécurité
