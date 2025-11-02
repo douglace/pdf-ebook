@@ -176,12 +176,13 @@ html, body {
     right: 40px;
     top: 100px;
     width: 550px;
-    height: 300px;
+    height: 500px;
 }
 
 .cover-image-zone img {
     width: 100%;
-    object-fit: cover;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 /* Conteneur du texte de couverture */
