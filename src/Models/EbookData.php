@@ -11,6 +11,7 @@ class EbookData
 
     // Tables de correspondance des catégories
     private const CAT_COLOR = [
+        "Art de Vivre" => [240, 83, 125],
         "Arts" => [242, 199, 211],
         "Cinema" => [245, 218, 223],
         "Culture" => [255, 235, 205],
@@ -146,6 +147,7 @@ class EbookData
     public function getCategoryColor(): array
     {
         $category = $this->getCategory();
+        
         return self::CAT_COLOR[$category] ?? self::CAT_COLOR['Others'];
     }
 
@@ -190,7 +192,7 @@ class EbookData
     public function getCoverData(): array
     {
         $categoryColor = $this->getCategoryColor();
-
+        
         return [
             'id' => $this->getId(),
             'title' => $this->getTitle(),

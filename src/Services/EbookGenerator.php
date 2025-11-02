@@ -222,6 +222,7 @@ class EbookGenerator
             '{{TITLE}}' => $coverData['title'],
             '{{SUBTITLE}}' => $coverData['subtitle'],
             '{{CATEGORY_LABEL}}' => $coverData['categoryLabel'],
+            '{{CATEGORY_COLOR}}' => $coverData['categoryColorCss'],
             '{{LICENSE_TEXT}}' => $licenseText,
             '{{CREATION_DATE}}' => $creationDate,
             '{{TOC_CONTENT}}' => $tocHtml,
