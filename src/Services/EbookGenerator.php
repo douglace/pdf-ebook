@@ -108,7 +108,7 @@ class EbookGenerator
 
         // Générer l'introduction
         $introductionContent = $this->introductionGenerator->extractIntroductionContent($ebookData);
-        $introductionHtml = $this->introductionGenerator->generateIntroductionHtml($introductionContent);
+        $introductionHtml = $this->introductionGenerator->generateIntroductionHtml($introductionContent, $acronymAnchors, $firstOccurrenceFound);
 
         // Générer les chapitres (corps de l'ebook) - pages dynamiques
         $chaptersContent = $this->chaptersGenerator->extractChaptersContent($ebookData);
@@ -116,7 +116,7 @@ class EbookGenerator
 
         // Générer la conclusion
         $conclusionContent = $this->conclusionGenerator->extractConclusionContent($ebookData);
-        $conclusionHtml = $this->conclusionGenerator->generateConclusionHtml($conclusionContent);
+        $conclusionHtml = $this->conclusionGenerator->generateConclusionHtml($conclusionContent, $acronymAnchors, $firstOccurrenceFound);
 
         // Générer le quiz
         $quizContent = $this->quizGenerator->extractQuizContent($ebookData);

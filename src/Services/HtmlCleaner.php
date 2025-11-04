@@ -43,10 +43,16 @@ class HtmlCleaner
         $xpath = new \DOMXPath($dom);
 
         // Exclure la page de couverture et les pages TOC
-        $pages = $xpath->query("
+        /*$pages = $xpath->query("
             //div[contains(concat(' ', normalize-space(@class), ' '), ' page ')
                 and not(contains(., 'cover-title'))
                 and not(contains(., 'TOC_CONTENT'))
+            ]
+        ");*/
+
+        $pages = $xpath->query("
+            //div[contains(concat(' ', normalize-space(@class), ' '), ' page ')
+                and not(contains(., 'cover-title'))
             ]
         ");
 
@@ -54,7 +60,7 @@ class HtmlCleaner
 
         foreach ($pages as $page) {
             $classes = explode(' ', $page->getAttribute('class'));
-            if (in_array('toc-page', $classes) || in_array('cover-page', $classes)) {
+            if (in_array('cover-page', $classes)) {
                 $pageNumber++;
                 continue;
             }

@@ -71,7 +71,7 @@ class ConclusionGenerator
     /**
      * Générer le HTML de la page de conclusion
      */
-    public function generateConclusionHtml(?array $conclusionContent): string
+    public function generateConclusionHtml(?array $conclusionContent, array $acronymAnchors = [], array &$firstOccurrenceFound = []): string
     {
         if (empty($conclusionContent)) {
             return '';
@@ -86,10 +86,11 @@ class ConclusionGenerator
             $html .= '<h1 class="conclusion-title page-title">' . htmlspecialchars($conclusionContent['title'], ENT_QUOTES, 'UTF-8') . '</h1>';
         }
 
-        // Ajouter les paragraphes
+        // Ajouter les paragraphes avec injection de liens vers le glossaire
         if (isset($conclusionContent['paragraphs']) && is_array($conclusionContent['paragraphs'])) {
             foreach ($conclusionContent['paragraphs'] as $paragraph) {
-                $html .= '<p class="conclusion-paragraph">' . htmlspecialchars($paragraph, ENT_QUOTES, 'UTF-8') . '</p>';
+                $paragraphWithLinks = $this->injectGlossaryLinks($paragraph, $acronymAnchors, $firstOccurrenceFound);
+                $html .= '<p class="conclusion-paragraph">' . $paragraphWithLinks . '</p>';
             }
         }
 
@@ -98,5 +99,49 @@ class ConclusionGenerator
         }
 
         return $html;
+    }
+
+    /**
+     * Injecter automatiquement les liens vers les acronymes dans le texte
+     *
+     * @param string $text Texte à modifier
+     * @param array $acronymAnchors Structure des ancres
+     * @param array $firstOccurrenceFound Référence pour tracker les premières occurrences
+     * @return string Texte modifié avec les liens HTML
+     */
+    private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
+    {
+        if (empty($acronymAnchors)) {
+            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        }
+
+        // Créer le pattern regex pour tous les acronymes
+        $escapedAcronyms = array_map('preg_quote', array_keys($acronymAnchors));
+        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
+
+        return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+            $spaceBefore = $match[1];
+            $acronym = $match[2];
+            $spaceAfter = $match[3];
+
+            if (!isset($acronymAnchors[$acronym])) {
+                return htmlspecialchars($match[0], ENT_QUOTES, 'UTF-8');
+            }
+
+            $anchors = $acronymAnchors[$acronym];
+            $prefix = '';
+
+            // Première occurrence : ajouter l'ancre de retour
+            if (!isset($firstOccurrenceFound[$acronym])) {
+                $firstOccurrenceFound[$acronym] = true;
+                $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
+            }
+
+            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
+                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';
+
+            return $spaceBefore . $prefix . $link . $spaceAfter;
+        }, $text);
     }
 }
