@@ -161,7 +161,12 @@ class GlossaryGenerator
      */
     public function generateGlossaryTitleHtml(string $language): string
     {
-        $title = 'GLOSSAIRE';
+        $language = strtolower($language);
+        if ($language === 'fr') {
+            $title = 'GLOSSAIRE';
+        } else {
+            $title = 'GLOSSARY';
+        }
 
         // Pas besoin d'ancre ici car le template ebook.html a déjà id="glossary" sur la div page
         $html = '<div class="glossary-container page-container">';
