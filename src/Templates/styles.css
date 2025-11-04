@@ -63,17 +63,35 @@ html, body {
 /* ===== PAGE TABLE DES MATIÈRES ===== */
 
 /* Filigrane pour la page TOC */
-.toc-watermark {
+.toc-watermark, 
+.license-watermark,
+.introduction-watermark,
+.conclusion-watermark,
+.glossary-watermark,
+.wikipedia-watermark,
+.websites-watermark,
+.suggestions-watermark,
+.quiz-watermark,
+.chapter-watermark {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-45deg);
-    opacity: 0.1;
     z-index: 1;
+    opacity: 0.1;
 }
 
-.toc-watermark img {
-    width: 400px;
+.toc-watermark img,
+.license-watermark img,
+.introduction-watermark img,
+.conclusion-watermark img,
+.glossary-watermark img,
+.wikipedia-watermark img,
+.websites-watermark img,
+.suggestions-watermark img,
+.quiz-watermark img,
+.chapter-watermark img {
+    width: 300px;
     height: auto;
 }
 
@@ -173,7 +191,7 @@ html, body {
 /* Zone de l'image de couverture */
 .cover-image-zone {
     position: absolute;
-    right: 40px;
+    right: 60px;
     top: 100px;
     width: 550px;
     height: 500px;
@@ -183,6 +201,7 @@ html, body {
     width: 100%;
     max-height: 100%;
     object-fit: contain;
+    object-position: right top;
 }
 
 /* Conteneur du texte de couverture */
@@ -255,22 +274,7 @@ html, body {
 
 /* ===== PAGE LICENCE ===== */
 
-/* Filigrane Encyclo-AI (logo oblique) */
-.license-watermark {
-    position: absolute;
-    left: 50%;
-    top: 40%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    opacity: 0.08;
-    width: 600px;
-    height: auto;
-    z-index: 1;
-}
 
-.license-watermark img {
-    width: 100%;
-    height: auto;
-}
 
 /* Conteneur du texte de licence */
 .license-container {
@@ -340,21 +344,6 @@ html, body {
 
 /* ===== PAGE D'INTRODUCTION ===== */
 
-/* Filigrane pour la page d'introduction (même style que TOC) */
-.introduction-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
-
-.introduction-watermark img {
-    width: 300px;
-    height: auto;
-}
-
 /* Conteneur de l'introduction */
 .introduction-container {
     position: absolute;
@@ -394,21 +383,6 @@ html, body {
 
 /* ===== PAGE CONCLUSION ===== */
 
-/* Filigrane pour la page conclusion */
-.conclusion-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
-
-.conclusion-watermark img {
-    width: 300px;
-    height: auto;
-}
-
 /* Conteneur de la conclusion */
 .conclusion-container {
     position: absolute;
@@ -439,19 +413,6 @@ html, body {
 /* ===== PAGE QUIZ ===== */
 
 /* Filigrane pour la page quiz */
-.quiz-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
-
-.quiz-watermark img {
-    width: 300px;
-    height: auto;
-}
 
 /* Conteneur du quiz */
 .quiz-container {
@@ -535,19 +496,7 @@ html, body {
 /* ===== PAGES CHAPITRES (CORPS DE L'EBOOK) ===== */
 
 /* Filigrane pour les pages de chapitres */
-.chapter-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
 
-.chapter-watermark img {
-    width: 300px;
-    height: auto;
-}
 
 /* Conteneur des chapitres */
 .chapter-container {
@@ -598,19 +547,7 @@ html, body {
 /* ===== PAGE GLOSSAIRE ===== */
 
 /* Filigrane pour la page glossaire */
-.glossary-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
 
-.glossary-watermark img {
-    width: 300px;
-    height: auto;
-}
 
 /* Conteneur de Glossaire */
 .glossary-container {
@@ -652,19 +589,7 @@ html, body {
 /* ===== PAGE WIKIPEDIA ===== */
 
 /* Filigrane pour la page wikipedia */
-.wikipedia-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
 
-.wikipedia-watermark img {
-    width: 300px;
-    height: auto;
-}
 
 /* Conteneur de Wikipedia */
 .wikipedia-container {
@@ -736,19 +661,6 @@ html, body {
 /* ===== PAGE SITES WEB ===== */
 
 /* Filigrane pour la page sites web */
-.websites-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
-
-.websites-watermark img {
-    width: 300px;
-    height: auto;
-}
 
 /* Conteneur de Sites Web */
 .websites-container {
@@ -820,19 +732,7 @@ html, body {
 /* ===== PAGE SUGGESTIONS ===== */
 
 /* Filigrane pour la page suggestions */
-.suggestions-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    z-index: 1;
-    opacity: 0.1;
-}
 
-.suggestions-watermark img {
-    width: 300px;
-    height: auto;
-}
 
 /* Conteneur de Suggestions */
 .suggestions-container {

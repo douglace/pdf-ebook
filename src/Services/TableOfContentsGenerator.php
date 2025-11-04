@@ -9,6 +9,7 @@ namespace Vex6\Phppdf\Services;
 class TableOfContentsGenerator
 {
     private array $tocEntries = [];
+    private string $language = 'français';
 
     /**
      * Ajouter une entrée à la table des matières
@@ -35,7 +36,8 @@ class TableOfContentsGenerator
         $firstPageEntries = $this->calculateFirstPageEntries();
         
         $html = '<div class="toc-container page-container">';
-        $html .= '<h1 class="toc-title">TABLE DES MATIÈRES</h1>';
+        $title = ($this->language === 'english') ? 'Table of contents' : 'TABLE DES MATIÈRES';
+        $html .= '<h1 class="toc-title">' . $title . '</h1>';
         
         for ($i = 0; $i < $firstPageEntries && $i < count($this->tocEntries); $i++) {
             $entry = $this->tocEntries[$i];
@@ -60,6 +62,14 @@ class TableOfContentsGenerator
         $html .= '</div>';
         
         return $html;
+    }
+
+    /**
+     * Définir la langue pour les libellés de la TOC
+     */
+    public function setLanguage(string $language): void
+    {
+        $this->language = strtolower($language);
     }
 
     /**

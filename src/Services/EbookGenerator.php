@@ -67,6 +67,7 @@ class EbookGenerator
         $creationDate = $this->licenseGenerator->formatCreationDate($createdTimestamp, $language);
 
         // Générer la table des matières
+        $this->tocGenerator->setLanguage($language);
         $this->tocGenerator->extractTOCFromData($ebookData->getRawData());
         $tocHtml = $this->tocGenerator->generateTOCHtml();
         $tocPage2Html = $this->tocGenerator->generateTOCPage2Html();
@@ -175,7 +176,7 @@ class EbookGenerator
         $glossaryPage2Html = '';
         $glossaryPage3Html = '';
 
-        if (!empty($glossaryPages)) {
+        if (!empty($glossaryPages) && !empty($glossaryContent)) {
             // Page 1: Title + content + close container
             $glossaryPage1Html = $glossaryTitleHtml . ($glossaryPages[0] ?? '') . '</div>';
 
