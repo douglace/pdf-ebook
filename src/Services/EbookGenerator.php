@@ -151,6 +151,7 @@ class EbookGenerator
         }
 
         // Générer Sites Web
+        $this->websitesGenerator->setLanguage($language);
         $websitesContent = $this->websitesGenerator->extractWebsitesContent($ebookData);
         $websitesPages = $this->websitesGenerator->generateWebsitesHtml($websitesContent, $language);
         $websitesTitleHtml = $this->websitesGenerator->generateWebsitesTitleHtml();

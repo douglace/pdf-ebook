@@ -162,7 +162,7 @@ class GlossaryGenerator
     public function generateGlossaryTitleHtml(string $language): string
     {
         $language = strtolower($language);
-        if ($language === 'fr') {
+        if ($language === 'français') {
             $title = 'GLOSSAIRE';
         } else {
             $title = 'GLOSSARY';

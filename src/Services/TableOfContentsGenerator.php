@@ -333,7 +333,7 @@ class TableOfContentsGenerator
         $this->addEntry($this->isFrench() ? 'GLOSSAIRE' : 'GLOSSARY', 'TITRE1', ++$currentPage, 'glossary');
         $this->addEntry('QUIZ', 'TITRE1', ++$currentPage, 'quiz');
         $this->addEntry('WIKIPEDIA', 'TITRE1', ++$currentPage, 'wikipedia');
-        $this->addEntry('SITES WEB', 'TITRE1', ++$currentPage, 'websites');
+        $this->addEntry($this->isFrench() ? 'SITES WEB' : "WEB SITES", 'TITRE1', ++$currentPage, 'websites');
         $this->addEntry('SUGGESTIONS', 'TITRE1', ++$currentPage, 'suggestions');
     }
 

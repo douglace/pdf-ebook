@@ -9,6 +9,18 @@ use Vex6\Phppdf\Models\EbookData;
  */
 class WebsitesGenerator
 {
+
+    private string $language = 'français';
+
+    /**
+     * Définir la langue pour les libellés de la TOC
+     */
+    public function setLanguage(string $language): void
+    {
+        $this->language = strtolower($language);
+    }
+
+
     /**
      * Extraire le contenu Sites Web depuis les données JSON
      */
@@ -116,7 +128,19 @@ class WebsitesGenerator
      */
     private function wrapPageContent(string $content): string
     {
-        return '<div class="websites-container page-container"> <h1 class="websites-title page-title">SITES WEB</h1>' . $content . '</div>';
+        $title = $this->isFrench() ? "SITES WEB" : "WEB SITES";
+        return '<div class="websites-container page-container"> <h1 class="websites-title page-title">'.$title.'</h1>' . $content . '</div>';
+    }
+
+
+    public function isFrench(): bool
+    {
+        return $this->language === 'français';
+    }
+
+    public function isEnglish(): bool
+    {
+        return $this->language === 'english';
     }
 
     /**
