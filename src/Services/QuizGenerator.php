@@ -47,7 +47,8 @@ class QuizGenerator
                     $question['answers'][] = [
                         'letter' => $letters[$letterIndex],
                         'text' => $this->cleanTextEncoding($choice['answer']),
-                        'isCorrect' => $choice['good'] ?? false
+                        'isCorrect' => $choice['good'] ?? false,
+                        'explanation' => $this->cleanTextEncoding($choice['explanation'] ?? '')
                     ];
                     $letterIndex++;
                 }
@@ -88,8 +89,28 @@ class QuizGenerator
         foreach ($quizContent['questions'] as $index => $question) {
             $questionNumber = $index + 1;
 
-            // Estimer si cette question tient sur la page actuelle
-            // (question + 4 réponses = environ 1 question)
+            // Construire d'abord le HTML de cette question
+            $questionHtml = '<div class="quiz-question">';
+            $questionHtml .= '<p class="quiz-question-text"><strong>' . $questionNumber . '. ' . htmlspecialchars($question['question'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
+
+            // Ajouter les réponses
+            if (!empty($question['answers'])) {
+                $questionHtml .= '<div class="quiz-answers">';
+                foreach ($question['answers'] as $answer) {
+                    $questionHtml .= '<p class="quiz-answer">';
+                    $questionHtml .= '<span class="answer-letter">' . htmlspecialchars($answer['letter'], ENT_QUOTES, 'UTF-8') . '</span> – ';
+                    // Nettoyer et corriger l'encodage du texte
+                    $cleanText = $this->cleanTextEncoding($answer['text']);
+                    $questionHtml .= $cleanText;
+                    $questionHtml .= '</p>';
+                }
+                $questionHtml .= '</div>';
+            }
+
+            $questionHtml .= '</div>';
+
+            // Vérifier si cette question tient sur la page actuelle
+            // Si on a déjà atteint la limite et qu'on n'est pas sur la première question
             if ($questionsOnCurrentPage >= $maxQuestionsPerPage && $index > 0) {
                 // Sauvegarder la page actuelle et commencer une nouvelle
                 $pages[] = $this->wrapPageContent($currentPageHtml, $pageNumber === 0);
@@ -98,26 +119,8 @@ class QuizGenerator
                 $pageNumber++;
             }
 
-            // Ajouter la question
-            $currentPageHtml .= '<div class="quiz-question">';
-            $currentPageHtml .= '<p class="quiz-question-text"><strong>' . $questionNumber . '. ' . htmlspecialchars($question['question'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
-
-            // Ajouter les réponses
-            if (!empty($question['answers'])) {
-                $currentPageHtml .= '<div class="quiz-answers">';
-                foreach ($question['answers'] as $answer) {
-                    $currentPageHtml .= '<p class="quiz-answer">';
-                    $currentPageHtml .= '<span class="answer-letter">' . htmlspecialchars($answer['letter'], ENT_QUOTES, 'UTF-8') . '</span> – ';
-                    // Nettoyer et corriger l'encodage du texte
-                    $cleanText = $this->cleanTextEncoding($answer['text']);
-                    $currentPageHtml .= $cleanText;
-                    $currentPageHtml .= '</p>';
-                }
-                $currentPageHtml .= '</div>';
-
-            }
-
-            $currentPageHtml .= '</div>';
+            // Ajouter la question à la page actuelle
+            $currentPageHtml .= $questionHtml;
             $questionsOnCurrentPage++;
         }
 
@@ -152,6 +155,126 @@ class QuizGenerator
     public function generateQuizTitleHtml(): string
     {
         return '<a id="quiz" name="quiz"></a>';
+    }
+
+    /**
+     * Générer les pages de réponses du quiz
+     * Retourne un tableau de pages HTML avec les réponses et explications
+     */
+    public function generateQuizAnswersHtml(?array $quizContent, string $language = 'français'): array
+    {
+        if (empty($quizContent) || empty($quizContent['questions'])) {
+            return [];
+        }
+
+        $pages = [];
+        $currentPageHtml = '';
+        $answersOnCurrentPage = 0;
+        $maxAnswersPerPage = 5; // Nombre moyen de réponses par page
+        $pageNumber = 0; // Compteur de pages
+        $title = $this->getAnswersPageTitle($language);
+
+        foreach ($quizContent['questions'] as $index => $question) {
+            $questionNumber = $index + 1;
+            
+            // Trouver la réponse correcte
+            $correctAnswer = null;
+            foreach ($question['answers'] as $answer) {
+                if ($answer['isCorrect']) {
+                    $correctAnswer = $answer;
+                    break;
+                }
+            }
+
+            if ($correctAnswer) {
+                // Construire d'abord le HTML de cette réponse
+                $answerHtml = '<div class="quiz-answer-entry">';
+                $answerHtml .= '<p class="quiz-answer-question"><strong>' . $questionNumber . '. ' . htmlspecialchars($question['question'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
+                
+                $answerHtml .= '<p class="quiz-answer-correct">';
+                $answerLabel = $this->getAnswerLabel($language);
+                $answerHtml .= '<strong>' . htmlspecialchars($answerLabel, ENT_QUOTES, 'UTF-8') . '</strong> ';
+                $answerHtml .= '<span class="answer-letter">' . htmlspecialchars(strtoupper($correctAnswer['letter']), ENT_QUOTES, 'UTF-8') . '</span> – ';
+                $answerHtml .= htmlspecialchars($correctAnswer['text'], ENT_QUOTES, 'UTF-8');
+                $answerHtml .= '</p>';
+
+                if (!empty($correctAnswer['explanation'])) {
+                    $answerHtml .= '<p class="quiz-answer-explanation">';
+                    $explanationLabel = $this->getExplanationLabel($language);
+                    $answerHtml .= '<strong>' . htmlspecialchars($explanationLabel, ENT_QUOTES, 'UTF-8') . '</strong> ';
+                    $answerHtml .= htmlspecialchars($correctAnswer['explanation'], ENT_QUOTES, 'UTF-8');
+                    $answerHtml .= '</p>';
+                }
+
+                $answerHtml .= '</div>';
+
+                // Vérifier si cette réponse tient sur la page actuelle
+                // Si on a déjà atteint la limite et qu'on n'est pas sur la première réponse
+                if ($answersOnCurrentPage >= $maxAnswersPerPage && $index > 0) {
+                    // Sauvegarder la page actuelle et commencer une nouvelle
+                    $pages[] = $this->wrapAnswersPageContent($currentPageHtml, $pageNumber === 0, $title);
+                    $currentPageHtml = '';
+                    $answersOnCurrentPage = 0;
+                    $pageNumber++;
+                }
+
+                // Ajouter la réponse à la page actuelle
+                $currentPageHtml .= $answerHtml;
+                $answersOnCurrentPage++;
+            }
+        }
+
+        // Ajouter la dernière page
+        if (!empty($currentPageHtml)) {
+            $pages[] = $this->wrapAnswersPageContent($currentPageHtml, $pageNumber === 0, $title);
+        }
+
+        return $pages;
+    }
+
+    /**
+     * Envelopper le contenu de la page de réponses dans un conteneur
+     */
+    private function wrapAnswersPageContent(string $content, bool $isFirstPage, string $title): string
+    {
+        $titleHtml = $isFirstPage ? '<h1 class="quiz-answers-page-title page-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h1>' : '';
+        return '<div class="quiz-answers-container page-container">' . $titleHtml . $content . '</div>';
+    }
+
+    /**
+     * Obtenir le titre de la page de réponses selon la langue
+     */
+    private function getAnswersPageTitle(string $language): string
+    {
+        $language = strtolower($language);
+        if ($language === 'english' || $language === 'en') {
+            return 'ANSWERS';
+        }
+        return 'RÉPONSES';
+    }
+
+    /**
+     * Obtenir le label "Réponse" selon la langue
+     */
+    private function getAnswerLabel(string $language): string
+    {
+        $language = strtolower($language);
+        if ($language === 'english' || $language === 'en') {
+            return 'Answer:';
+        }
+        return 'Réponse :';
+    }
+
+    /**
+     * Obtenir le label "Explication" selon la langue
+     */
+    private function getExplanationLabel(string $language): string
+    {
+        $language = strtolower($language);
+        if ($language === 'english' || $language === 'en') {
+            return 'Explanation:';
+        }
+        return 'Explication :';
     }
 
     /**

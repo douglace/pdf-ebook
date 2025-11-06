@@ -15,6 +15,7 @@ class HtmlCleaner
 
         $pages = [
             'quiz-page',
+            'quiz-answers-page',
             'glossary-page',
             'wikipedia-page',
             'sites-web-page',
@@ -92,10 +93,16 @@ class HtmlCleaner
 
         // Mapping des classes de pages vers les titres TOC
         $pageToTOCMapping = [
-            'sites-web-page' => 'SITES WEB',
+            'sites-web-page' => [
+                'SITES WEB',
+                'WEB SITES'
+            ],
             'suggestions-page' => 'SUGGESTIONS', 
             'wikipedia-page' => 'WIKIPEDIA',
-            'glossary-page' => 'GLOSSAIRE'
+            'glossary-page' => [
+                'GLOSSAIRE',
+                'GLOSSARY'
+            ]
         ];
 
         foreach ($pageToTOCMapping as $pageClass => $tocTitle) {
@@ -111,7 +118,14 @@ class HtmlCleaner
                     $titleSpan = $xpath->query(".//span[@class='toc-entry-title']", $entry);
                     if ($titleSpan->length > 0) {
                         $title = trim($titleSpan->item(0)->textContent);
-                        if (stripos($title, $tocTitle) !== false) {
+                        if(is_array($tocTitle)) {
+                            // Si le titre correspond à un des titres dans le tableau, on supprime l'entrée
+                            if (in_array($title, $tocTitle)) {
+                                $entry->parentNode->removeChild($entry);
+                                break;
+                            }
+                        } elseif (stripos($title, $tocTitle) !== false) {
+                            // Si le titre contient le texte recherché, on supprime l'entrée
                             $entry->parentNode->removeChild($entry);
                             break;
                         }

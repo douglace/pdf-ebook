@@ -494,6 +494,54 @@ html, body {
     line-height: 1.6;
 }
 
+/* ===== PAGE RÉPONSES DU QUIZ ===== */
+
+/* Conteneur de la page de réponses */
+.quiz-answers-container {
+    position: absolute;
+    top: 80px;
+    z-index: 2;
+}
+
+/* Titre de la page de réponses */
+.quiz-answers-page-title {
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* Entrée de réponse (question + réponse + explication) */
+.quiz-answer-entry {
+    margin-bottom: 30px;
+}
+
+/* Question dans la page de réponses */
+.quiz-answer-question {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    color: rgb(0, 0, 0);
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+/* Réponse correcte */
+.quiz-answer-correct {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+/* Explication de la réponse */
+.quiz-answer-explanation {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 12px;
+    color: rgb(50, 50, 50);
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 10px;
+}
+
 /* ===== PAGES CHAPITRES (CORPS DE L'EBOOK) ===== */
 
 /* Filigrane pour les pages de chapitres */

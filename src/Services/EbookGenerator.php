@@ -134,6 +134,20 @@ class EbookGenerator
             $quizPage3Html = $quizPages[2] ?? '';
         }
 
+        // Générer les pages de réponses du quiz
+        $quizAnswersPages = $this->quizGenerator->generateQuizAnswersHtml($quizContent, $language);
+
+        // Construire le HTML des pages de réponses
+        $quizAnswersPage1Html = '';
+        $quizAnswersPage2Html = '';
+        $quizAnswersPage3Html = '';
+
+        if (!empty($quizAnswersPages)) {
+            $quizAnswersPage1Html = $quizAnswersPages[0] ?? '';
+            $quizAnswersPage2Html = $quizAnswersPages[1] ?? '';
+            $quizAnswersPage3Html = $quizAnswersPages[2] ?? '';
+        }
+
         // Générer Wikipedia
         $wikipediaContent = $this->wikipediaGenerator->extractWikipediaContent($ebookData);
         $wikipediaPages = $this->wikipediaGenerator->generateWikipediaHtml($wikipediaContent, $language);
@@ -238,6 +252,9 @@ class EbookGenerator
             '{{QUIZ_CONTENT_PAGE1}}' => $quizPage1Html,
             '{{QUIZ_CONTENT_PAGE2}}' => $quizPage2Html,
             '{{QUIZ_CONTENT_PAGE3}}' => $quizPage3Html,
+            '{{QUIZ_ANSWERS_CONTENT_PAGE1}}' => $quizAnswersPage1Html,
+            '{{QUIZ_ANSWERS_CONTENT_PAGE2}}' => $quizAnswersPage2Html,
+            '{{QUIZ_ANSWERS_CONTENT_PAGE3}}' => $quizAnswersPage3Html,
             '{{WIKIPEDIA_CONTENT_PAGE1}}' => $wikipediaPage1Html,
             '{{WIKIPEDIA_CONTENT_PAGE2}}' => $wikipediaPage2Html,
             '{{WIKIPEDIA_CONTENT_PAGE3}}' => $wikipediaPage3Html,
