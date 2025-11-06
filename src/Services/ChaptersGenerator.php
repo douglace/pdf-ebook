@@ -100,14 +100,18 @@ class ChaptersGenerator
         // - subchapter-title (h2) : font 14px × line-height 1.4 + margin-top 33px + margin-bottom 33px = 81px
         // - paragraph : font 12px × line-height 1.5 + margin-bottom 12px = 30px par ligne estimée
 
-        $safetyMargin = 10; // pixels de marge de sécurité
-        $maxPageHeight = 980 - $safetyMargin; // 920px disponibles
-        $paragraphBottomSafety = 100; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas
+        $safetyMargin = 40; // pixels de marge de sécurité générale
+        $maxPageHeight = 980 - $safetyMargin; // 940px disponibles
+        $paragraphBottomSafety = 120; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas
 
         $chapterTitleHeight = 41; // pixels
         $subchapterTitleHeight = 45; // pixels
         $paragraphLineHeight = 16; // 12px × 1.5 line-height
         $paragraphMargin = 12; // margin-bottom
+
+        // Marge critique pour éviter les titres orphelins (titre seul en bas de page)
+        // Réduite pour permettre plus de flexibilité tout en protégeant contre les orphelins
+        $orphanPreventionMargin = 80; // pixels minimum requis après un titre (équivaut à ~5 lignes de texte)
 
         // Compteur pour générer des ancres cohérentes avec la TOC
         $chapterCounter = 1;
@@ -132,26 +136,47 @@ class ChaptersGenerator
             $currentPageHtml .= '<h1 id="' . $anchorId . '" class="chapter-title page-title">' . $chapterTitle . '</h1>';
             $currentPageHeight += $chapterTitleHeight;
 
+            // PROTECTION ANTI-ORPHELIN POUR TITRE DE CHAPITRE (H1)
+            // Vérifier qu'il y a assez d'espace pour au moins un sous-titre après le titre du chapitre
+            // Un titre de chapitre ne doit JAMAIS être seul en bas de page
+            if (!empty($chapter['subchapters'])) {
+                $minContentAfterChapterTitle = $subchapterTitleHeight + ($paragraphLineHeight * 2); // au moins 2 lignes de texte
+
+                if ($currentPageHeight + $minContentAfterChapterTitle + $orphanPreventionMargin > $maxPageHeight) {
+                    // Le titre de chapitre arriverait trop près du bas, le mettre sur une nouvelle page
+                    $currentPageHtml .= '</div>'; // Close chapter-container
+                    $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
+
+                    // Redémarrer la page avec le titre du chapitre
+                    $currentPageHtml = '<div class="chapter-container page-container">';
+                    $currentPageHtml .= '<h1 id="' . $anchorId . '" class="chapter-title page-title">' . $chapterTitle . '</h1>';
+                    $currentPageHeight = $chapterTitleHeight;
+                }
+            }
+
             // Traiter les sous-chapitres
             foreach ($chapter['subchapters'] as $subchapter) {
                 $subchapterNumber = $subchapter['numero'];
                 $subchapterTitle = htmlspecialchars($subchapter['title'], ENT_QUOTES, 'UTF-8');
                 
-                
 
-                // Estimer la hauteur minimale du premier paragraphe pour éviter les titres orphelins
-                $minParagraphHeight = 0;
+
+                // PROTECTION ANTI-ORPHELIN POUR SOUS-TITRE (H2)
+                // Estimer la hauteur minimale du contenu qui doit suivre le sous-titre
+                // Un sous-titre ne doit JAMAIS être seul en bas de page
+                $minContentAfterSubtitle = 0;
                 if (!empty($subchapter['paragraphs'])) {
                     $firstParagraph = $subchapter['paragraphs'][0];
-                    $estimatedLines = max(1, ceil(strlen($firstParagraph) / 110));
-                    $minParagraphHeight = ($estimatedLines * $paragraphLineHeight) + $paragraphMargin;
+                    // Estimer avec plus de précision (80 caractères par ligne)
+                    $estimatedLines = max(2, ceil(strlen($firstParagraph) / 80)); // au moins 2 lignes
+                    $minContentAfterSubtitle = ($estimatedLines * $paragraphLineHeight) + $paragraphMargin;
                 }
 
-                // Vérifier si le titre du sous-chapitre + au moins le premier paragraphe rentrent sur la page actuelle
-                // Cela évite les titres orphelins en bas de page
-                $requiredSpace = $subchapterTitleHeight + $minParagraphHeight;
-                if ($currentPageHeight + $requiredSpace > $maxPageHeight) {
-                    // Créer une nouvelle page
+                // Vérifier si le sous-titre + contenu minimum + marge anti-orphelin rentrent sur la page
+                // Si non, mettre le sous-titre sur une nouvelle page
+                $requiredSpaceForSubtitle = $subchapterTitleHeight + $minContentAfterSubtitle + $orphanPreventionMargin;
+                if ($currentPageHeight + $requiredSpaceForSubtitle > $maxPageHeight) {
+                    // Le sous-titre arriverait trop près du bas, créer une nouvelle page
                     $currentPageHtml .= '</div>'; // Close chapter-container
                     $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
 
@@ -162,20 +187,51 @@ class ChaptersGenerator
 
                 // Ajouter le sous-chapitre avec ancre cohérente
                 $subchapterAnchorId = 'chapter-' . $chapterCounter . '-subchapter-' . $subchapterNumber;
-                $currentPageHtml .= '<h2 id="' . $subchapterAnchorId . '" class="subchapter-title">' . $subchapterTitle . '</h2>';
+                $subchapterHtml = '<h2 id="' . $subchapterAnchorId . '" class="subchapter-title">' . $subchapterTitle . '</h2>';
+                $currentPageHtml .= $subchapterHtml;
                 $currentPageHeight += $subchapterTitleHeight;
 
                 // Ajouter les paragraphes avec gestion des sauts de page et injection de liens
-                foreach ($subchapter['paragraphs'] as $paragraph) {
-                    // Estimer la hauteur du paragraphe
-                    // On compte environ 80 caractères par ligne (police 12px dans une largeur ~600px)
-                    $estimatedLines = max(1, ceil(strlen($paragraph) / 80));
-                    $paragraphHeight = ($estimatedLines * $paragraphLineHeight) + $paragraphMargin;
+                foreach ($subchapter['paragraphs'] as $paragraphIndex => $paragraph) {
+                    // Pour le PREMIER paragraphe après un sous-titre : vérification spéciale
+                    // Si c'est le premier paragraphe et qu'il ne peut pas rentrer sans aller au fond de la page,
+                    // on déplace TOUT (sous-titre + paragraphe) sur la nouvelle page
+                    if ($paragraphIndex === 0 && !empty($paragraph)) {
+                        $estimatedLines = max(1, ceil(strlen($paragraph) / 80));
+                        $firstParagraphHeight = ($estimatedLines * $paragraphLineHeight) + $paragraphMargin;
 
-                    // Vérifier si le paragraphe rentre sur la page actuelle avec la marge de sécurité supplémentaire
-                    // Si ajouter ce paragraphe ferait qu'il arrive à moins de $paragraphBottomSafety pixels du bas,
-                    // on le met sur une nouvelle page
-                    if ($currentPageHeight + $paragraphHeight + $paragraphBottomSafety > $maxPageHeight && $currentPageHeight > 0) {
+                        // Si ajouter ce premier paragraphe ferait qu'il arrive trop près du bas,
+                        // on déplace le sous-titre ET le paragraphe sur une nouvelle page
+                        if ($currentPageHeight + $firstParagraphHeight + $paragraphBottomSafety > $maxPageHeight) {
+                            // Retirer le sous-titre de la page actuelle
+                            $currentPageHtml = substr($currentPageHtml, 0, -strlen($subchapterHtml));
+                            $currentPageHeight -= $subchapterTitleHeight;
+
+                            // Créer une nouvelle page
+                            $currentPageHtml .= '</div>'; // Close chapter-container
+                            $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
+
+                            // Démarrer une nouvelle page avec le sous-titre
+                            $currentPageHtml = '<div class="chapter-container page-container">';
+                            $currentPageHtml .= $subchapterHtml;
+                            $currentPageHeight = $subchapterTitleHeight;
+                        }
+                    }
+
+                    // Maintenant traiter le paragraphe normalement
+                    // Estimer la hauteur du paragraphe avec précision (si ce n'est pas déjà fait pour le premier paragraphe)
+                    if ($paragraphIndex !== 0) {
+                        $estimatedLines = max(1, ceil(strlen($paragraph) / 80));
+                        $paragraphHeight = ($estimatedLines * $paragraphLineHeight) + $paragraphMargin;
+                    } else {
+                        // Réutiliser le calcul déjà fait pour le premier paragraphe
+                        $paragraphHeight = $firstParagraphHeight;
+                    }
+
+                    // PROTECTION STRICTE : éviter que le paragraphe arrive trop près du bas
+                    // On utilise une marge de sécurité renforcée pour garantir une bonne lisibilité
+                    // Note: pour le premier paragraphe, cette vérification a déjà été faite ci-dessus
+                    if ($paragraphIndex > 0 && $currentPageHeight + $paragraphHeight + $paragraphBottomSafety > $maxPageHeight && $currentPageHeight > 0) {
                         // Le paragraphe arriverait trop près du bas, créer une nouvelle page
                         $currentPageHtml .= '</div>'; // Close chapter-container
                         $pages[] = $this->wrapInPageStructure($currentPageHtml, $watermarkImageBase64);
