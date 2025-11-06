@@ -10,6 +10,12 @@ use Vex6\Phppdf\Models\EbookData;
 class QuizGenerator
 {
     /**
+     * Nombre maximum de caractères par page pour les réponses du quiz
+     * Ajustez cette valeur pour contrôler quand passer à la page suivante
+     */
+    private const MAX_CHARACTERS_PER_ANSWERS_PAGE = 1800;
+
+    /**
      * Extraire le contenu du quiz depuis la section quiz du JSON
      */
     public function extractQuizContent(EbookData $ebookData): ?array
@@ -169,14 +175,13 @@ class QuizGenerator
 
         $pages = [];
         $currentPageHtml = '';
-        $answersOnCurrentPage = 0;
-        $maxAnswersPerPage = 5; // Nombre moyen de réponses par page
+        $currentPageCharCount = 0; // Compteur de caractères pour la page actuelle
         $pageNumber = 0; // Compteur de pages
         $title = $this->getAnswersPageTitle($language);
 
         foreach ($quizContent['questions'] as $index => $question) {
             $questionNumber = $index + 1;
-            
+
             // Trouver la réponse correcte
             $correctAnswer = null;
             foreach ($question['answers'] as $answer) {
@@ -190,7 +195,7 @@ class QuizGenerator
                 // Construire d'abord le HTML de cette réponse
                 $answerHtml = '<div class="quiz-answer-entry">';
                 $answerHtml .= '<p class="quiz-answer-question"><strong>' . $questionNumber . '. ' . htmlspecialchars($question['question'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
-                
+
                 $answerHtml .= '<p class="quiz-answer-correct">';
                 $answerLabel = $this->getAnswerLabel($language);
                 $answerHtml .= '<strong>' . htmlspecialchars($answerLabel, ENT_QUOTES, 'UTF-8') . '</strong> ';
@@ -208,19 +213,26 @@ class QuizGenerator
 
                 $answerHtml .= '</div>';
 
-                // Vérifier si cette réponse tient sur la page actuelle
-                // Si on a déjà atteint la limite et qu'on n'est pas sur la première réponse
-                if ($answersOnCurrentPage >= $maxAnswersPerPage && $index > 0) {
+                // Calculer le nombre de caractères de texte visible (sans les balises HTML)
+                $textContent = $question['question'] . ' ' . $correctAnswer['text'];
+                if (!empty($correctAnswer['explanation'])) {
+                    $textContent .= ' ' . $correctAnswer['explanation'];
+                }
+                $answerCharCount = mb_strlen($textContent);
+
+                // Vérifier si cette réponse dépasse la limite de caractères de la page actuelle
+                // Si on a déjà du contenu et que l'ajout dépasserait la limite, créer une nouvelle page
+                if ($currentPageCharCount > 0 && ($currentPageCharCount + $answerCharCount) > self::MAX_CHARACTERS_PER_ANSWERS_PAGE) {
                     // Sauvegarder la page actuelle et commencer une nouvelle
                     $pages[] = $this->wrapAnswersPageContent($currentPageHtml, $pageNumber === 0, $title);
                     $currentPageHtml = '';
-                    $answersOnCurrentPage = 0;
+                    $currentPageCharCount = 0;
                     $pageNumber++;
                 }
 
                 // Ajouter la réponse à la page actuelle
                 $currentPageHtml .= $answerHtml;
-                $answersOnCurrentPage++;
+                $currentPageCharCount += $answerCharCount;
             }
         }
 
