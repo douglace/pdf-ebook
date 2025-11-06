@@ -80,7 +80,9 @@ class WebsitesGenerator
             // Estimer si cette entrée tient sur la page actuelle
             if ($entriesOnCurrentPage >= $maxEntriesPerPage && $index > 0) {
                 // Sauvegarder la page actuelle et commencer une nouvelle
-                $pages[] = $this->wrapPageContent($currentPageHtml);
+                // La première page a le titre, les autres non
+                $isFirstPage = empty($pages);
+                $pages[] = $this->wrapPageContent($currentPageHtml, $isFirstPage);
                 $currentPageHtml = '';
                 $entriesOnCurrentPage = 0;
             }
@@ -117,7 +119,9 @@ class WebsitesGenerator
 
         // Ajouter la dernière page
         if (!empty($currentPageHtml)) {
-            $pages[] = $this->wrapPageContent($currentPageHtml);
+            // La première page a le titre, les autres non
+            $isFirstPage = empty($pages);
+            $pages[] = $this->wrapPageContent($currentPageHtml, $isFirstPage);
         }
 
         return $pages;
@@ -126,10 +130,14 @@ class WebsitesGenerator
     /**
      * Envelopper le contenu dans un conteneur de page
      */
-    private function wrapPageContent(string $content): string
+    private function wrapPageContent(string $content, bool $includeTitle = false): string
     {
-        $title = $this->isFrench() ? "SITES WEB" : "WEB SITES";
-        return '<div class="websites-container page-container"> <h1 class="websites-title page-title">'.$title.'</h1>' . $content . '</div>';
+        $titleHtml = '';
+        if ($includeTitle) {
+            $title = $this->isFrench() ? "SITES WEB" : "WEB SITES";
+            $titleHtml = '<h1 class="websites-title page-title">' . $title . '</h1>';
+        }
+        return '<div class="websites-container page-container">' . $titleHtml . $content . '</div>';
     }
 
 

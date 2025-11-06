@@ -140,7 +140,7 @@ html, body {
     align-items: baseline;
     margin-bottom: 6px;
     margin-left: 20px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: normal;
     color: rgb(80, 80, 80);
     page-break-inside: avoid;
@@ -693,7 +693,7 @@ html, body {
 /* Lien Wikipedia */
 .wikipedia-link {
     font-family: 'Quicksand', sans-serif;
-    font-size: 10px;
+    font-size: 12px;
     font-style: italic;
     margin-bottom: 5px;
 }
@@ -764,7 +764,7 @@ html, body {
 /* Lien Sites Web */
 .websites-link {
     font-family: 'Quicksand', sans-serif;
-    font-size: 10px;
+    font-size: 12px;
     font-style: italic;
     margin-bottom: 5px;
 }

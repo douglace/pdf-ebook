@@ -68,7 +68,9 @@ class WikipediaGenerator
             // Estimer si cette entrée tient sur la page actuelle
             if ($entriesOnCurrentPage >= $maxEntriesPerPage && $index > 0) {
                 // Sauvegarder la page actuelle et commencer une nouvelle
-                $pages[] = $this->wrapPageContent($currentPageHtml);
+                // La première page a le titre, les autres non
+                $isFirstPage = empty($pages);
+                $pages[] = $this->wrapPageContent($currentPageHtml, $isFirstPage);
                 $currentPageHtml = '';
                 $entriesOnCurrentPage = 0;
             }
@@ -105,8 +107,11 @@ class WikipediaGenerator
 
         // Ajouter la dernière page
         if (!empty($currentPageHtml)) {
-            $pages[] = $this->wrapPageContent($currentPageHtml);
+            // La première page a le titre, les autres non
+            $isFirstPage = empty($pages);
+            $pages[] = $this->wrapPageContent($currentPageHtml, $isFirstPage);
         }
+
 
         return $pages;
     }
@@ -114,9 +119,10 @@ class WikipediaGenerator
     /**
      * Envelopper le contenu dans un conteneur de page
      */
-    private function wrapPageContent(string $content): string
+    private function wrapPageContent(string $content, bool $includeTitle = false): string
     {
-        return '<div class="wikipedia-container page-container"> <h1 class="wikipedia-title page-title">WIKIPEDIA</h1>' . $content . '</div>';
+        $title = $includeTitle ? '<h1 class="wikipedia-title page-title">WIKIPEDIA</h1>' : '';
+        return '<div class="wikipedia-container page-container">' . $title . $content . '</div>';
     }
 
     /**
