@@ -50,10 +50,10 @@ class QuizGenerator
     private const ANSWER_MARGIN_BOTTOM_PX = 6;
     private const ANSWERS_LEFT_MARGIN_PX = 20;
 
-    private const ANSWER_ENTRY_MARGIN_BOTTOM_PX = 30;
-    private const ANSWER_QUESTION_MARGIN_BOTTOM_PX = 10;
-    private const ANSWER_CORRECT_MARGIN_BOTTOM_PX = 10;
-    private const ANSWER_EXPLANATION_MARGIN_BOTTOM_PX = 10;
+    private const ANSWER_ENTRY_MARGIN_BOTTOM_PX = 18;
+    private const ANSWER_QUESTION_MARGIN_BOTTOM_PX = 6;
+    private const ANSWER_CORRECT_MARGIN_BOTTOM_PX = 6;
+    private const ANSWER_EXPLANATION_MARGIN_BOTTOM_PX = 6;
 
     /**
      * Largeur approximative du conteneur en pixels pour calculer le nombre de caractères par ligne
