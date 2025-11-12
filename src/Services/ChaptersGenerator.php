@@ -102,7 +102,7 @@ class ChaptersGenerator
 
         $safetyMargin = 40; // pixels de marge de sécurité générale
         $maxPageHeight = 980 - $safetyMargin; // 940px disponibles
-        $paragraphBottomSafety = 120; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas
+        $paragraphBottomSafety = 60; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas (~4 lignes)
 
         $chapterTitleHeight = 41; // pixels
         $subchapterTitleHeight = 45; // pixels

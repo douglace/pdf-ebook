@@ -52,8 +52,29 @@ class WikipediaGenerator
 
         $pages = [];
         $currentPageHtml = '';
-        $entriesOnCurrentPage = 0;
-        $maxEntriesPerPage = 4; // Nombre moyen d'entrées par page
+        $currentPageHeight = 0;
+
+        // Dimensions basées sur styles.css (similaire à ChaptersGenerator)
+        // - Hauteur page : 297mm ≈ 1120px
+        // - wikipedia-container : top 80px
+        // - Espace disponible : 1120px - 80px - 30px (bottom safety pour numéro de page) = 1010px
+        $safetyMargin = 20; // Marge réduite car les entrées Wikipedia sont plus compactes
+        $maxPageHeight = 1010 - $safetyMargin; // 990px disponibles (augmenté de 940px)
+        $entryBottomSafety = 15; // Marge réduite pour mieux remplir les pages (vs 30px précédemment)
+
+        // Hauteurs estimées des éléments (basé sur CSS réel de styles.css)
+        // - page-title (h1) : font 18px × line-height 1.3 + margin-bottom 18px = 41px
+        // - wikipedia-introduction : font 12px × line-height 1.6 (≈19px/ligne) + margin-bottom 30px
+        // - wikipedia-entry-title (h3) : font 14px × line-height 1.4 (≈20px) + margin-bottom 10px = ~30px
+        // - wikipedia-description : font 12px × line-height 1.6 = 19px par ligne + margin-bottom 8px
+        // - wikipedia-link : font 12px + margin-bottom 5px = ~20px
+        // - wikipedia-entry : margin-bottom 30px
+        $introductionHeight = 80; // Texte intro (2-3 lignes × 19px) + margin-bottom 30px
+        $entryTitleHeight = 30; // 14px × 1.4 + margin-bottom 10px
+        $descriptionLineHeight = 19; // 12px × 1.6
+        $descriptionMargin = 8;
+        $linkHeight = 20; // 12px + margin-bottom 5px
+        $entryBottomMargin = 30; // margin-bottom de .wikipedia-entry
 
         // Introduction de Wikipedia
         $introText = $this->getIntroductionText($language);
@@ -62,17 +83,36 @@ class WikipediaGenerator
         $introduction .= '</div>';
 
         $currentPageHtml .= $introduction;
-        $entriesOnCurrentPage = 0; // L'intro compte pour de l'espace
+        $currentPageHeight += $introductionHeight;
 
-        foreach ($wikipediaContent as $index => $entry) {
-            // Estimer si cette entrée tient sur la page actuelle
-            if ($entriesOnCurrentPage >= $maxEntriesPerPage && $index > 0) {
+        foreach ($wikipediaContent as $entry) {
+            // Estimer la hauteur de cette entrée
+            $entryHeight = $entryBottomMargin;
+
+            if (!empty($entry['title'])) {
+                $entryHeight += $entryTitleHeight;
+            }
+
+            if (!empty($entry['description'])) {
+                // Estimer le nombre de lignes (environ 100 caractères par ligne pour être plus précis avec la largeur réelle)
+                // Utiliser max(1, ...) pour permettre des descriptions courtes sur une seule ligne
+                $descriptionLines = max(1, ceil(strlen($entry['description']) / 100));
+                $entryHeight += ($descriptionLines * $descriptionLineHeight) + $descriptionMargin;
+            }
+
+            if (!empty($entry['link'])) {
+                $entryHeight += $linkHeight;
+            }
+
+            // Vérifier si cette entrée tient sur la page actuelle
+            // IMPORTANT: On utilise $entryBottomSafety comme dans ChaptersGenerator pour éviter
+            // que les entrées arrivent trop près du bas de page
+            if ($currentPageHeight + $entryHeight + $entryBottomSafety > $maxPageHeight && $currentPageHeight > 0) {
                 // Sauvegarder la page actuelle et commencer une nouvelle
-                // La première page a le titre, les autres non
                 $isFirstPage = empty($pages);
                 $pages[] = $this->wrapPageContent($currentPageHtml, $isFirstPage);
                 $currentPageHtml = '';
-                $entriesOnCurrentPage = 0;
+                $currentPageHeight = 0;
             }
 
             // Ajouter l'entrée
@@ -102,16 +142,14 @@ class WikipediaGenerator
             }
 
             $currentPageHtml .= '</div>';
-            $entriesOnCurrentPage++;
+            $currentPageHeight += $entryHeight;
         }
 
         // Ajouter la dernière page
         if (!empty($currentPageHtml)) {
-            // La première page a le titre, les autres non
             $isFirstPage = empty($pages);
             $pages[] = $this->wrapPageContent($currentPageHtml, $isFirstPage);
         }
-
 
         return $pages;
     }
