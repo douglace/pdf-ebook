@@ -9,6 +9,8 @@ class EbookData
 {
     protected array $data;
 
+    private $formatted_text = null;
+
     // Tables de correspondance des catégories
     private const CAT_COLOR = [
         "Art de Vivre" => [240, 83, 125],
@@ -48,8 +50,19 @@ class EbookData
         "Sociology" => "Sociologie",
         "Sports" => "Sports",
         "Technology" => "Technologie",
-        "Others" => "Autres"
+        "Others" => "Autres",
+        'Lifestyle'       => 'Art de Vivre',
+        'Law / Politics'  => 'Droit / Politique',
+        'Environment'     => 'Environnement',
+        'Medicine'        => 'Médecine',
     ];
+
+
+
+    public function resetFormattedText(): void
+    {
+        $this->formatted_text = null;
+    }
 
     /**
      * Constructeur qui accepte soit un chemin de fichier JSON, soit une chaîne JSON, soit un tableau
@@ -59,29 +72,60 @@ class EbookData
      */
     public function __construct($jsonPathOrData)
     {
+        // Validation initiale: ne pas accepter null ou vide
+        if ($jsonPathOrData === null) {
+            throw new \Exception("Le paramètre ne peut pas être null");
+        }
+
         // Cas 1: Tableau de données déjà décodé
         if (is_array($jsonPathOrData)) {
+            if (empty($jsonPathOrData)) {
+                throw new \Exception("Le tableau de données ne peut pas être vide");
+            }
             $this->data = $jsonPathOrData;
             return;
         }
 
         // Cas 2: Chaîne qui pourrait être un chemin de fichier ou du JSON
         if (is_string($jsonPathOrData)) {
+            // Validation: ne pas accepter une chaîne vide
+            if (trim($jsonPathOrData) === '') {
+                throw new \Exception("La chaîne JSON ne peut pas être vide");
+            }
+
             // Vérifier si c'est un chemin de fichier valide
             if (file_exists($jsonPathOrData)) {
                 $jsonContent = file_get_contents($jsonPathOrData);
+                if ($jsonContent === false) {
+                    throw new \Exception("Impossible de lire le fichier: " . $jsonPathOrData);
+                }
             } else {
                 // Sinon, traiter comme une chaîne JSON directe
                 $jsonContent = $jsonPathOrData;
             }
 
-            $this->data = json_decode($jsonContent, true);
+            if ($jsonContent === null || !$jsonContent) {
+                throw new \Exception("La chaîne JSON ne peut pas être vide ");
+            }
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
+            $data = json_decode($jsonContent, true);
+            if ($data === null || !is_array($data)) {
+                throw new \Exception("Le JSON décodé doit être un tableau/objet, type reçu: " . gettype($data));
+            }
+            $this->data = $data;
+            if ($this->data === null && json_last_error() !== JSON_ERROR_NONE) {
                 throw new \Exception("Erreur lors du parsing du JSON: " . json_last_error_msg());
             }
+
+            if (!is_array($this->data)) {
+                throw new \Exception("Le JSON décodé doit être un tableau/objet, type reçu: " . gettype($this->data));
+            }
+
             return;
         }
+
+        $this->resetFormattedText();
+        $this->getFormattedText();
 
         throw new \Exception("Le paramètre doit être un chemin de fichier, une chaîne JSON ou un tableau");
     }
@@ -103,11 +147,117 @@ class EbookData
     }
 
     /**
+     * Récupérer le formatted_text depuis l'API Python
+     * Cette méthode fait un appel API pour récupérer le formatted_text à jour
+     * 
+     * @return string Le formatted_text récupéré depuis l'API
+     * @throws \Exception Si l'appel API échoue
+     */
+    public function getFormattedText(): string
+    {
+        if ($this->formatted_text) {
+            return $this->formatted_text;
+        }
+
+        $ebook_id = $this->getId();
+        if (empty($ebook_id)) {
+            throw new \Exception("Impossible de récupérer le formatted_text : ID ebook manquant");
+        }
+
+        // URL de l'API Python
+        $api_url = "http://54.38.35.141:8080/get/ebook/id/" . urlencode($ebook_id) . "/formatted_text";
+        
+        // Configuration cURL optimisée
+        $ch = curl_init($api_url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 300, // 5 minutes pour les gros fichiers
+            CURLOPT_CONNECTTIMEOUT => 30,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'User-Agent: WordPress-EncycloAI/1.0',
+            ],
+            CURLOPT_BUFFERSIZE => 32768, // 32KB buffer
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_ENCODING => '',
+        ]);
+        
+        // Retry en cas d'échec
+        $max_retries = 3;
+        $response = false;
+        $http_code = 0;
+        $curl_error = '';
+        
+        for ($attempt = 1; $attempt <= $max_retries; $attempt++) {
+            $response = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curl_error = curl_error($ch);
+            
+            if ($response !== false && $http_code === 200 && empty($curl_error)) {
+                break; // Succès
+            }
+            
+            if ($attempt < $max_retries) {
+                sleep(pow(2, $attempt - 1)); // Backoff exponentiel
+            }
+        }
+        
+        curl_close($ch);
+
+        if ($curl_error) {
+            throw new \Exception("Erreur cURL lors de la récupération du formatted_text : " . $curl_error);
+        }
+
+        if ($http_code !== 200) {
+            throw new \Exception("Erreur API lors de la récupération du formatted_text : Code HTTP " . $http_code);
+        }
+
+        if ($response === false || empty($response)) {
+            throw new \Exception("Réponse vide de l'API lors de la récupération du formatted_text");
+        }
+
+        // Décoder le JSON pour extraire le formatted_text
+        $data = json_decode($response, true);
+        
+        if ($data === null || !isset($data['formatted_text'])) {
+            // Fallback : utiliser le formatted_text du JSON local si disponible
+            if (isset($this->data['formatted_text'])) {
+                return $this->data['formatted_text'];
+            }
+            throw new \Exception("Le formatted_text n'a pas été trouvé dans la réponse de l'API");
+        }
+        
+        $formatted_text = $data['formatted_text'];
+        
+        // Si c'est null ou vide, utiliser le fallback
+        if (empty($formatted_text) && isset($this->data['formatted_text'])) {
+            return $this->data['formatted_text'];
+        }
+        
+        if (empty($formatted_text)) {
+            throw new \Exception("Le formatted_text est vide pour cet ebook");
+        }
+
+        $this->formatted_text = $formatted_text;
+        
+        return $formatted_text;
+    }
+
+    /**
      * Extraire le sous-titre depuis formatted_text
      */
     public function getSubtitle(): string
     {
-        $formatted = $this->data['formatted_text'] ?? '';
+        try {
+            $formatted = $this->getFormattedText();
+        } catch (\Exception $e) {
+            // Fallback sur le formatted_text local si l'API échoue
+            $formatted = $this->data['formatted_text'] ?? '';
+        }
 
         // Chercher entre [DEBUT_CHAMP_SOUS_TITRE] et [FIN_CHAMP_SOUS_TITRE]
         $subtitle = $this->extractBetween(
@@ -147,7 +297,6 @@ class EbookData
     public function getCategoryColor(): array
     {
         $category = $this->getCategory();
-        
         return self::CAT_COLOR[$category] ?? self::CAT_COLOR['Others'];
     }
 
@@ -192,7 +341,7 @@ class EbookData
     public function getCoverData(): array
     {
         $categoryColor = $this->getCategoryColor();
-        
+
         return [
             'id' => $this->getId(),
             'title' => $this->getTitle(),
@@ -207,9 +356,29 @@ class EbookData
 
     /**
      * Obtenir les données brutes complètes
+     * Note: Le formatted_text dans ces données peut être obsolète.
+     * Utilisez getFormattedText() pour obtenir la version à jour depuis l'API.
      */
     public function getRawData(): array
     {
         return $this->data;
+    }
+
+    /**
+     * Obtenir les données brutes complètes avec le formatted_text à jour depuis l'API
+     * Cette méthode récupère le formatted_text depuis l'API et l'injecte dans les données
+     * 
+     * @return array Les données avec le formatted_text à jour
+     */
+    public function getRawDataWithFormattedText(): array
+    {
+        $data = $this->data;
+        try {
+            $data['formatted_text'] = $this->getFormattedText();
+        } catch (\Exception $e) {
+            // Si l'API échoue, on garde le formatted_text local
+            // Le formatted_text local sera déjà dans $data si présent
+        }
+        return $data;
     }
 }

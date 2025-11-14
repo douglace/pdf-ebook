@@ -9,62 +9,156 @@ use Vex6\Phppdf\Models\EbookData;
 class ChaptersGenerator
 {
     /**
-     * Extract chapters content from JSON data
+     * Extract chapters content from formatted_text
      *
      * @param EbookData $ebookData
      * @return array|null Array of chapters with subchapters or null if not found
      */
     public function extractChaptersContent(EbookData $ebookData): ?array
     {
-        $rawData = $ebookData->getRawData();
+        try {
+            $formattedText = $ebookData->getFormattedText();
+        } catch (\Exception $e) {
+            // Fallback sur le formatted_text local si l'API échoue
+            $rawData = $ebookData->getRawData();
+            $formattedText = $rawData['formatted_text'] ?? '';
+        }
 
-        $chapters = $rawData['chapters']['chapters'] ?? [];
-
-        if (empty($chapters)) {
+        if (empty($formattedText)) {
             return null;
         }
 
+        $lines = explode("\n", $formattedText);
         $results = [];
+        $currentChapter = null;
+        $currentSubchapter = null;
+        $currentParagraph = '';
+        $chapterCounter = 0;
 
-        foreach ($chapters as $chapter) {
-            $chapterInfo = $chapter['chapter_info_title'] ?? [];
-            $numeroChapter = $chapterInfo['numero_chapter'] ?? '';
-            $chapterTitle = $chapterInfo['chapter'] ?? '';
+        foreach ($lines as $line) {
+            $line = trim($line);
 
-            // Skip introduction (0) and conclusion (-1) as they are handled separately
-            if ($numeroChapter === '0' || $numeroChapter === '-1') {
+            // Détecter le début de l'introduction pour savoir quand commencer à collecter les chapitres
+            if (preg_match('/^\[TITRE1\].*INTRODUCTION/i', $line)) {
+                continue; // Ignorer l'introduction
+            }
+
+            // Détecter le début de la conclusion pour arrêter la collecte
+            if (preg_match('/^\[TITRE1\].*CONCLUSION/i', $line)) {
+                break; // Arrêter à la conclusion
+            }
+
+            // Détecter un nouveau chapitre (TITRE1 qui n'est pas introduction/conclusion)
+            if (preg_match('/^\[TITRE1\]\s*(.+)$/i', $line, $matches)) {
+                // Sauvegarder le chapitre précédent s'il existe
+                if ($currentChapter !== null) {
+                    // Sauvegarder le sous-chapitre en cours s'il existe
+                    if ($currentSubchapter !== null) {
+                        if (!empty($currentParagraph)) {
+                            $currentSubchapter['paragraphs'][] = trim($currentParagraph);
+                            $currentParagraph = '';
+                        }
+                        if (!empty($currentSubchapter['title']) || !empty($currentSubchapter['paragraphs'])) {
+                            $currentChapter['subchapters'][] = $currentSubchapter;
+                        }
+                        $currentSubchapter = null;
+                    }
+                    $results[] = $currentChapter;
+                }
+
+                // Commencer un nouveau chapitre
+                $chapterCounter++;
+                $currentChapter = [
+                    'numero' => (string)$chapterCounter,
+                    'title' => trim($matches[1]),
+                    'subchapters' => []
+                ];
+                $currentSubchapter = null;
+                $currentParagraph = '';
                 continue;
             }
 
-            $subchapters = [];
-
-            foreach ($chapter['subchapters'] ?? [] as $subchapter) {
-                $subchapterInfo = $subchapter['subchapter_info_title'] ?? [];
-                $subchapterText = $subchapter['subchapter_info_text'] ?? [];
-
-                $numeroSubchapter = $subchapterInfo['numero_subchapter'] ?? '';
-                $subchapterTitle = $subchapterInfo['subchapter'] ?? '';
-                $paragraphs = $subchapterText['paragraphs'] ?? [];
-
-                $paragraphTexts = [];
-                foreach ($paragraphs as $paragraph) {
-                    $paragraphTexts[] = $paragraph['paragraph_text'] ?? '';
+            // Détecter un nouveau sous-chapitre (TITRE2)
+            if (preg_match('/^\[TITRE2\]\s*(.+)$/i', $line, $matches)) {
+                // Si on n'est pas dans un chapitre, ignorer
+                if ($currentChapter === null) {
+                    continue;
                 }
 
-                if (!empty($subchapterTitle) || !empty($paragraphTexts)) {
-                    $subchapters[] = [
-                        'numero' => $numeroSubchapter,
-                        'title' => $subchapterTitle,
-                        'paragraphs' => $paragraphTexts
-                    ];
+                // Sauvegarder le sous-chapitre précédent s'il existe
+                if ($currentSubchapter !== null) {
+                    if (!empty($currentParagraph)) {
+                        $currentSubchapter['paragraphs'][] = trim($currentParagraph);
+                        $currentParagraph = '';
+                    }
+                    if (!empty($currentSubchapter['title']) || !empty($currentSubchapter['paragraphs'])) {
+                        $currentChapter['subchapters'][] = $currentSubchapter;
+                    }
                 }
+
+                // Commencer un nouveau sous-chapitre
+                // Extraire le numéro du sous-chapitre si présent dans le titre (ex: "1. Titre" ou "1 - Titre")
+                $subchapterTitle = trim($matches[1]);
+                $numeroSubchapter = '';
+                if (preg_match('/^(\d+)[\.\-\s]+(.+)$/', $subchapterTitle, $subMatches)) {
+                    $numeroSubchapter = $subMatches[1];
+                    $subchapterTitle = trim($subMatches[2]);
+                } else {
+                    // Si pas de numéro explicite, utiliser l'index
+                    $numeroSubchapter = (string)(count($currentChapter['subchapters']) + 1);
+                }
+
+                $currentSubchapter = [
+                    'numero' => $numeroSubchapter,
+                    'title' => $subchapterTitle,
+                    'paragraphs' => []
+                ];
+                $currentParagraph = '';
+                continue;
             }
 
-            $results[] = [
-                'numero' => $numeroChapter,
-                'title' => $chapterTitle,
-                'subchapters' => $subchapters
-            ];
+            // Traiter les paragraphes normaux
+            if (preg_match('/^\[NORMAL\]\s*(.+)$/i', $line, $matches)) {
+                // Si on n'est pas dans un chapitre, ignorer
+                if ($currentChapter === null) {
+                    continue;
+                }
+
+                // Si on n'a pas de sous-chapitre, en créer un implicite
+                if ($currentSubchapter === null) {
+                    $currentSubchapter = [
+                        'numero' => '1',
+                        'title' => '',
+                        'paragraphs' => []
+                    ];
+                }
+
+                // Sauvegarder le paragraphe précédent s'il existe
+                if (!empty($currentParagraph)) {
+                    $currentSubchapter['paragraphs'][] = trim($currentParagraph);
+                    $currentParagraph = '';
+                }
+                $currentParagraph = trim($matches[1]);
+            } elseif (!empty($line) && !preg_match('/^\[/', $line)) {
+                // Ligne de continuation du paragraphe (pas de balise)
+                if ($currentChapter !== null && $currentSubchapter !== null && !empty($currentParagraph)) {
+                    $currentParagraph .= ' ' . $line;
+                }
+            }
+        }
+
+        // Sauvegarder le dernier chapitre s'il existe
+        if ($currentChapter !== null) {
+            // Sauvegarder le dernier sous-chapitre s'il existe
+            if ($currentSubchapter !== null) {
+                if (!empty($currentParagraph)) {
+                    $currentSubchapter['paragraphs'][] = trim($currentParagraph);
+                }
+                if (!empty($currentSubchapter['title']) || !empty($currentSubchapter['paragraphs'])) {
+                    $currentChapter['subchapters'][] = $currentSubchapter;
+                }
+            }
+            $results[] = $currentChapter;
         }
 
         return empty($results) ? null : $results;
@@ -102,7 +196,7 @@ class ChaptersGenerator
 
         $safetyMargin = 40; // pixels de marge de sécurité générale
         $maxPageHeight = 980 - $safetyMargin; // 940px disponibles
-        $paragraphBottomSafety = 60; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas (~4 lignes)
+        $paragraphBottomSafety = 60; // Marge supplémentaire pour éviter qu'un paragraphe arrive trop près du bas
 
         $chapterTitleHeight = 41; // pixels
         $subchapterTitleHeight = 45; // pixels

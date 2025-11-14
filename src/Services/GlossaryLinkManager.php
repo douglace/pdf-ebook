@@ -163,7 +163,7 @@ class GlossaryLinkManager
         // Si première occurrence trouvée → lien retour cliquable
         if (isset($firstOccurrenceFound[$acronym])) {
             $linkPlaceholder = sprintf(
-                '{{EAIEG_LINK:%d:%s - %s}}',
+                '{{EAIEG_LINK:%d:%s - %s:0066CC}}',
                 $anchors['links']['back'],
                 htmlspecialchars($acronym, ENT_QUOTES),
                 htmlspecialchars($definition, ENT_QUOTES)

@@ -635,6 +635,12 @@ html, body {
     text-align: justify;
 }
 
+/* Liens dans les paragraphes du glossaire (soulignés et bleus) */
+.glossary-detail a {
+    color: #0066CC !important;
+    text-decoration: underline !important;
+}
+
 /* ===== PAGE WIKIPEDIA ===== */
 
 /* Filigrane pour la page wikipedia */
