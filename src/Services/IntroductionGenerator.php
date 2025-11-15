@@ -30,7 +30,8 @@ class IntroductionGenerator
             $line = trim($line);
             
             // Détecter le début de l'introduction
-            if (preg_match('/^\[TITRE1\].*INTRODUCTION/i', $line)) {
+            // Plus strict : le titre doit COMMENCER par INTRODUCTION
+            if (preg_match('/^\[TITRE1\]\s*INTRODUCTION\b/i', $line)) {
                 $collectingIntroduction = true;
                 // Extraire le titre de l'introduction
                 if (preg_match('/^\[TITRE1\]\s*(.+)$/i', $line, $matches)) {
@@ -42,7 +43,7 @@ class IntroductionGenerator
             // Si on collecte l'introduction
             if ($collectingIntroduction) {
                 // Arrêter la collecte si on rencontre un nouveau TITRE1 (mais pas l'introduction)
-                if (preg_match('/^\[TITRE1\]/', $line) && !preg_match('/INTRODUCTION/i', $line)) {
+                if (preg_match('/^\[TITRE1\]/', $line) && !preg_match('/^\s*INTRODUCTION\b/i', $line)) {
                     break;
                 }
 

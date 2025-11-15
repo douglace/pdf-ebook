@@ -39,12 +39,14 @@ class ChaptersGenerator
             $line = trim($line);
 
             // Détecter le début de l'introduction pour savoir quand commencer à collecter les chapitres
-            if (preg_match('/^\[TITRE1\].*INTRODUCTION/i', $line)) {
+            // Plus strict : le titre doit COMMENCER par INTRODUCTION
+            if (preg_match('/^\[TITRE1\]\s*INTRODUCTION\b/i', $line)) {
                 continue; // Ignorer l'introduction
             }
 
             // Détecter le début de la conclusion pour arrêter la collecte
-            if (preg_match('/^\[TITRE1\].*CONCLUSION/i', $line)) {
+            // Plus strict : le titre doit COMMENCER par CONCLUSION
+            if (preg_match('/^\[TITRE1\]\s*CONCLUSION\b/i', $line)) {
                 break; // Arrêter à la conclusion
             }
 

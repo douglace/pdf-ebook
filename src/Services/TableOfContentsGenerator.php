@@ -258,13 +258,105 @@ class TableOfContentsGenerator
     }
 
     /**
-     * Extraire les entrées TOC à partir des données JSON
+     * Extraire les entrées TOC à partir du formatted_text
      * Utilise la même source de données que ChaptersGenerator pour la cohérence
+     * Note: Les numéros de page sont des placeholders (1) qui seront mis à jour par updateTOCPageNumbers()
+     */
+    public function extractTOCFromFormattedText(string $formattedText): void
+    {
+        if (empty($formattedText)) {
+            return;
+        }
+
+        $lines = explode("\n", $formattedText);
+        $chapterCounter = 1;
+        $placeholderPage = 1; // Placeholder - sera mis à jour par updateTOCPageNumbers()
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            // Détecter l'introduction (TITRE1 qui COMMENCE par INTRODUCTION)
+            // Plus strict : doit commencer par "INTRODUCTION" pour éviter les faux positifs
+            if (preg_match('/^\[TITRE1\]\s*(INTRODUCTION\s*.*)$/i', $line, $matches)) {
+                $introTitle = trim($matches[1]);
+                $this->addEntry($introTitle, 'TITRE1', $placeholderPage, 'introduction');
+                continue;
+            }
+
+            // Détecter la conclusion (TITRE1 qui COMMENCE par CONCLUSION)
+            // Plus strict : doit commencer par "CONCLUSION" pour éviter les faux positifs
+            if (preg_match('/^\[TITRE1\]\s*(CONCLUSION\s*.*)$/i', $line, $matches)) {
+                $conclusionTitle = trim($matches[1]);
+                $this->addEntry($conclusionTitle, 'TITRE1', $placeholderPage, 'conclusion');
+                continue;
+            }
+
+            // Détecter un chapitre principal (TITRE1, ni introduction ni conclusion ni sections finales)
+            if (preg_match('/^\[TITRE1\]\s*(.+)$/i', $line, $matches)) {
+                $chapterTitle = trim($matches[1]);
+
+                // Ignorer si le titre COMMENCE par introduction, conclusion ou sections finales (déjà gérées)
+                // On utilise ^ pour détecter uniquement le début du titre
+                if (preg_match('/^(INTRODUCTION|CONCLUSION|GLOSSAIRE|GLOSSARY|QUIZ|WIKIPEDIA|SITES?\s+WEB|WEB\s+SITES?|SUGGESTIONS)\b/i', $chapterTitle)) {
+                    continue;
+                }
+
+                // Ajouter le chapitre avec ancre cohérente
+                $anchorId = 'chapter-' . $chapterCounter;
+                $this->addEntry($chapterTitle, 'TITRE1', $placeholderPage, $anchorId);
+                $chapterCounter++;
+                continue;
+            }
+
+            // Détecter un sous-chapitre (TITRE2)
+            if (preg_match('/^\[TITRE2\]\s*(.+)$/i', $line, $matches)) {
+                $subchapterTitle = trim($matches[1]);
+
+                // Extraire le numéro du sous-chapitre si présent
+                $numeroSubchapter = '';
+                if (preg_match('/^(\d+)[\.\-\s]+(.+)$/', $subchapterTitle, $subMatches)) {
+                    $numeroSubchapter = $subMatches[1];
+                    $subchapterTitle = trim($subMatches[2]);
+                } else {
+                    // Utiliser un numéro par défaut si pas de numéro explicite
+                    // Compter combien de sous-chapitres on a déjà pour ce chapitre
+                    $currentChapterSubcount = 1;
+                    foreach ($this->tocEntries as $entry) {
+                        if ($entry['level'] === 'TITRE2' &&
+                            isset($entry['anchor']) &&
+                            strpos($entry['anchor'], 'chapter-' . ($chapterCounter - 1) . '-subchapter-') === 0) {
+                            $currentChapterSubcount++;
+                        }
+                    }
+                    $numeroSubchapter = (string)$currentChapterSubcount;
+                }
+
+                // Créer l'ancre pour le sous-chapitre (utiliser le dernier chapitre ajouté)
+                $lastChapterNum = max(1, $chapterCounter - 1);
+                $subchapterAnchorId = 'chapter-' . $lastChapterNum . '-subchapter-' . $numeroSubchapter;
+
+                $this->addEntry($subchapterTitle, 'TITRE2', $placeholderPage, $subchapterAnchorId);
+                continue;
+            }
+        }
+
+        // Ajouter les sections finales avec placeholders
+        // Les numéros de page seront mis à jour automatiquement par updateTOCPageNumbers()
+        $this->addEntry($this->isFrench() ? 'GLOSSAIRE' : 'GLOSSARY', 'TITRE1', $placeholderPage, 'glossary');
+        $this->addEntry('QUIZ', 'TITRE1', $placeholderPage, 'quiz');
+        $this->addEntry('WIKIPEDIA', 'TITRE1', $placeholderPage, 'wikipedia');
+        $this->addEntry($this->isFrench() ? 'SITES WEB' : "WEB SITES", 'TITRE1', $placeholderPage, 'websites');
+        $this->addEntry('SUGGESTIONS', 'TITRE1', $placeholderPage, 'suggestions');
+    }
+
+    /**
+     * Extraire les entrées TOC à partir des données JSON (DEPRECATED - utiliser extractTOCFromFormattedText)
+     * @deprecated Utiliser extractTOCFromFormattedText pour cohérence avec ChaptersGenerator
      */
     public function extractTOCFromData(array $data): void
     {
         $currentPage = 4; // Commencer après couverture, licence et TOC
-        
+
         if($this->extractIntroductionFromData($data, $currentPage)) {
             $currentPage++;
         }
@@ -272,50 +364,42 @@ class TableOfContentsGenerator
         // Utiliser la même source de données que ChaptersGenerator (chapters.chapters)
         $chapters = $data['chapters']['chapters'] ?? [];
 
-        // Debug temporaire
-        error_log("TOC Debug: Nombre de chapitres trouvés: " . count($chapters));
-
         if (!empty($chapters)) {
             $chapterCounter = 1; // Compteur pour générer des ancres cohérentes
-            
+
             foreach ($chapters as $chapter) {
                 $chapterInfo = $chapter['chapter_info_title'] ?? [];
                 $numeroChapter = $chapterInfo['numero_chapter'] ?? '';
                 $chapterTitle = $chapterInfo['chapter'] ?? '';
 
-                // Debug temporaire
-                error_log("TOC Debug: Chapitre trouvé - Numéro: '$numeroChapter', Titre: '$chapterTitle'");
-
                 // Ignorer l'introduction (0) et la conclusion (-1) car elles sont gérées séparément
                 if ($numeroChapter === '0' || $numeroChapter === '-1') {
-                    error_log("TOC Debug: Chapitre ignoré (introduction/conclusion)");
                     continue;
                 }
 
                 // Ajouter le chapitre principal avec ancre cohérente
                 $anchorId = 'chapter-' . $chapterCounter;
-                error_log("TOC Debug: Ajout chapitre - Ancre: '$anchorId', Page: $currentPage");
                 $this->addEntry($chapterTitle, 'TITRE1', $currentPage, $anchorId);
                 $currentPage++;
-                
+
                 // Ajouter les sous-chapitres
                 if (isset($chapter['subchapters'])) {
                     foreach ($chapter['subchapters'] as $subchapter) {
                         $subchapterInfo = $subchapter['subchapter_info_title'] ?? [];
                         $subchapterTitle = $subchapterInfo['subchapter'] ?? '';
                         $subchapterNumber = $subchapterInfo['numero_subchapter'] ?? '';
-                        
+
                         if (!empty($subchapterTitle)) {
                             $subchapterAnchorId = 'chapter-' . $chapterCounter . '-subchapter-' . $subchapterNumber;
                             $this->addEntry($subchapterTitle, 'TITRE2', $currentPage, $subchapterAnchorId);
                         }
                     }
                 }
-                
+
                 $chapterCounter++;
             }
         }
-        
+
         // Ajouter la conclusion si elle existe
         foreach ($chapters as $chapter) {
             $chapterInfo = $chapter['chapter_info_title'] ?? [];
@@ -328,7 +412,7 @@ class TableOfContentsGenerator
                 break;
             }
         }
-        
+
         // Ajouter les sections finales
         $this->addEntry($this->isFrench() ? 'GLOSSAIRE' : 'GLOSSARY', 'TITRE1', ++$currentPage, 'glossary');
         $this->addEntry('QUIZ', 'TITRE1', ++$currentPage, 'quiz');

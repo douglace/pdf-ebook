@@ -68,7 +68,15 @@ class EbookGenerator
 
         // Générer la table des matières
         $this->tocGenerator->setLanguage($language);
-        $this->tocGenerator->extractTOCFromData($ebookData->getRawData());
+        // Utiliser le formatted_text comme source (cohérence avec ChaptersGenerator et IntroductionGenerator)
+        try {
+            $formattedText = $ebookData->getFormattedText();
+        } catch (\Exception $e) {
+            // Fallback sur le formatted_text local si l'API échoue
+            $rawData = $ebookData->getRawData();
+            $formattedText = $rawData['formatted_text'] ?? '';
+        }
+        $this->tocGenerator->extractTOCFromFormattedText($formattedText);
         $tocHtml = $this->tocGenerator->generateTOCHtml();
         $tocPage2Html = $this->tocGenerator->generateTOCPage2Html();
 
