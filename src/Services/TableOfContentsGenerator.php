@@ -275,18 +275,20 @@ class TableOfContentsGenerator
         foreach ($lines as $line) {
             $line = trim($line);
 
-            // Détecter l'introduction (TITRE1 qui COMMENCE par INTRODUCTION)
-            // Plus strict : doit commencer par "INTRODUCTION" pour éviter les faux positifs
-            if (preg_match('/^\[TITRE1\]\s*(INTRODUCTION\s*.*)$/i', $line, $matches)) {
-                $introTitle = trim($matches[1]);
+            // Détecter l'introduction (TITRE1 qui COMMENCE par "INTRODUCTION -" ou "INTRODUCTION:")
+            // Très strict : doit avoir un séparateur (- ou :) après "INTRODUCTION" pour éviter les faux positifs
+            // Exemples valides: "INTRODUCTION - Titre" ou "INTRODUCTION: Titre"
+            // Non valide: "INTRODUCTION À LA..." (chapitre normal)
+            if (preg_match('/^\[TITRE1\]\s*INTRODUCTION\s*[-:]\s*(.*)$/i', $line, $matches)) {
+                $introTitle = 'INTRODUCTION - ' . trim($matches[1]);
                 $this->addEntry($introTitle, 'TITRE1', $placeholderPage, 'introduction');
                 continue;
             }
 
-            // Détecter la conclusion (TITRE1 qui COMMENCE par CONCLUSION)
-            // Plus strict : doit commencer par "CONCLUSION" pour éviter les faux positifs
-            if (preg_match('/^\[TITRE1\]\s*(CONCLUSION\s*.*)$/i', $line, $matches)) {
-                $conclusionTitle = trim($matches[1]);
+            // Détecter la conclusion (TITRE1 qui COMMENCE par "CONCLUSION -" ou "CONCLUSION:")
+            // Très strict : doit avoir un séparateur (- ou :) après "CONCLUSION" pour éviter les faux positifs
+            if (preg_match('/^\[TITRE1\]\s*CONCLUSION\s*[-:]\s*(.*)$/i', $line, $matches)) {
+                $conclusionTitle = 'CONCLUSION - ' . trim($matches[1]);
                 $this->addEntry($conclusionTitle, 'TITRE1', $placeholderPage, 'conclusion');
                 continue;
             }
@@ -295,9 +297,10 @@ class TableOfContentsGenerator
             if (preg_match('/^\[TITRE1\]\s*(.+)$/i', $line, $matches)) {
                 $chapterTitle = trim($matches[1]);
 
-                // Ignorer si le titre COMMENCE par introduction, conclusion ou sections finales (déjà gérées)
-                // On utilise ^ pour détecter uniquement le début du titre
-                if (preg_match('/^(INTRODUCTION|CONCLUSION|GLOSSAIRE|GLOSSARY|QUIZ|WIKIPEDIA|SITES?\s+WEB|WEB\s+SITES?|SUGGESTIONS)\b/i', $chapterTitle)) {
+                // Ignorer si le titre COMMENCE par les sections finales (déjà gérées)
+                // Note: INTRODUCTION et CONCLUSION ne sont plus dans cette liste car ils sont détectés
+                // uniquement s'ils ont un séparateur (- ou :) après le mot
+                if (preg_match('/^(GLOSSAIRE|GLOSSARY|QUIZ|WIKIPEDIA|SITES?\s+WEB|WEB\s+SITES?|SUGGESTIONS)\b/i', $chapterTitle)) {
                     continue;
                 }
 
