@@ -43,12 +43,38 @@ class PdfGenerator
         $pdfPath = $this->outputPath . '/' . $filename . '.pdf';
 
         try {
+            // Vérifier si le fichier existe déjà et essayer de le supprimer
+            if (file_exists($pdfPath)) {
+                // Vérifier si le fichier est verrouillé (sur Windows)
+                if (PHP_OS_FAMILY === 'Windows') {
+                    // Essayer de renommer le fichier pour vérifier s'il est verrouillé
+                    $backupPath = $pdfPath . '.old.' . time();
+                    if (!@rename($pdfPath, $backupPath)) {
+                        // Le fichier est probablement verrouillé, essayer de le supprimer après un délai
+                        error_log("PdfGenerator - Le fichier PDF existe et semble être verrouillé: " . $pdfPath);
+                        // Essayer de supprimer le fichier de sauvegarde s'il existe
+                        @unlink($backupPath);
+                        // Créer un nom de fichier unique avec timestamp
+                        $pdfPath = $this->outputPath . '/' . $filename . '_' . time() . '.pdf';
+                        error_log("PdfGenerator - Utilisation d'un nouveau nom de fichier: " . $pdfPath);
+                    } else {
+                        // Le fichier a pu être renommé, le supprimer
+                        @unlink($backupPath);
+                    }
+                } else {
+                    // Sur Linux/Unix, essayer de supprimer directement
+                    @unlink($pdfPath);
+                }
+            }
+
             $browsershot = Browsershot::html($html)
                 ->format('A4') // Format A4 standard
                 ->landscape(false) // Portrait
                 ->margins(0, 0, 0, 0) // Pas de marges
                 ->showBackground() // Imprimer les arrière-plans
-                ->waitUntilNetworkIdle() // Attendre que toutes les ressources soient chargées
+                ->waitUntilNetworkIdle(true) // Attendre que toutes les ressources soient chargées
+                ->timeout(300) // Timeout de 5 minutes au lieu de 60s par défaut
+                ->setDelay(2000) // Délai de 2 secondes avant la capture pour laisser le temps au rendu
                 ->addChromiumArguments([
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -67,10 +93,29 @@ class PdfGenerator
             // Essayer d'utiliser Chrome système si disponible
             $this->configureChromePath($browsershot);
 
+            // S'assurer que le dossier de sortie existe et est accessible en écriture
+            if (!is_writable($this->outputPath)) {
+                throw new \Exception("Le dossier de sortie n'est pas accessible en écriture: " . $this->outputPath);
+            }
+
             $browsershot->save($pdfPath);
 
+            // Attendre un peu pour que le fichier soit complètement écrit
+            $maxAttempts = 10;
+            $attempt = 0;
+            while (!file_exists($pdfPath) && $attempt < $maxAttempts) {
+                usleep(100000); // Attendre 100ms
+                $attempt++;
+            }
+
             if (!file_exists($pdfPath)) {
-                throw new \Exception("Le PDF n'a pas été généré correctement");
+                throw new \Exception("Le PDF n'a pas été généré correctement. Le fichier n'existe pas après " . ($maxAttempts * 100) . "ms");
+            }
+
+            // Vérifier que le fichier n'est pas vide
+            if (filesize($pdfPath) === 0) {
+                @unlink($pdfPath);
+                throw new \Exception("Le PDF généré est vide");
             }
 
             return $pdfPath;

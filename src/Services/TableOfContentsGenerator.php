@@ -170,13 +170,13 @@ class TableOfContentsGenerator
         // - TITRE2 : font 12px + margin 6px = 18px
 
         // Marge de sécurité pour éviter les coupures en bas de page
-        $safetyMargin = 300; // pixels
+        $safetyMargin = 310; // pixels
         $availableHeight = 920 - $safetyMargin; // pixels
         $currentHeight = 0;
         $entryCount = 0;
 
         foreach ($this->tocEntries as $entry) {
-            $entryHeight = $entry['level'] === 'TITRE1' ? 28 : 18;
+            $entryHeight = $entry['level'] === 'TITRE1' ? 30 : 18;
 
             // Vérifier si on peut encore ajouter cette entrée
             if ($currentHeight + $entryHeight <= $availableHeight) {
