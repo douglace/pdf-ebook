@@ -621,7 +621,7 @@ html, body {
     font-size: 13px;
     font-weight: bold;
     color: rgb(100, 4, 43) !important;
-    text-decoration: none !important;
+    text-decoration: underline !important;
     margin-bottom: 6px;
     line-height: 1.4;
 }

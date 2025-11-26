@@ -287,7 +287,9 @@ class GlossaryGenerator
         }
 
         // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map('preg_quote', array_keys($acronymAnchors));
+        $escapedAcronyms = array_map(function($acronym) {
+            return preg_quote($acronym, '/');
+        }, array_keys($acronymAnchors));
         $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
 
         return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
@@ -309,9 +311,9 @@ class GlossaryGenerator
             }
 
             // Créer le lien vers le glossaire (couleur bleue #0066CC)
-            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
-                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';
-
+            /*$link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
+                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';*/
+                    $link = htmlspecialchars($acronym, ENT_QUOTES);
             return $spaceBefore . $prefix . $link . $spaceAfter;
         }, $text);
     }

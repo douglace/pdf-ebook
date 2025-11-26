@@ -118,7 +118,9 @@ class IntroductionGenerator
         }
 
         // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map('preg_quote', array_keys($acronymAnchors));
+        $escapedAcronyms = array_map(function($acronym) {
+            return preg_quote($acronym, '/');
+        }, array_keys($acronymAnchors));
         $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
 
         return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
