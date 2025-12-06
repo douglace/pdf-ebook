@@ -99,27 +99,40 @@ class EbookData
                 if ($jsonContent === false) {
                     throw new \Exception("Impossible de lire le fichier: " . $jsonPathOrData);
                 }
+                // Supprimer le BOM UTF-8 si présent
+                if (substr($jsonContent, 0, 3) === "\xEF\xBB\xBF") {
+                    $jsonContent = substr($jsonContent, 3);
+                }
             } else {
                 // Sinon, traiter comme une chaîne JSON directe
                 $jsonContent = $jsonPathOrData;
+                // Supprimer le BOM UTF-8 si présent
+                if (substr($jsonContent, 0, 3) === "\xEF\xBB\xBF") {
+                    $jsonContent = substr($jsonContent, 3);
+                }
             }
 
             if ($jsonContent === null || !$jsonContent) {
                 throw new \Exception("La chaîne JSON ne peut pas être vide ");
             }
 
+            // Réinitialiser les erreurs JSON précédentes
+            json_decode('{}');
+            
             $data = json_decode($jsonContent, true);
+            
+            // Vérifier d'abord s'il y a une erreur JSON
+            $jsonError = json_last_error();
+            if ($jsonError !== JSON_ERROR_NONE) {
+                throw new \Exception("Erreur lors du parsing du JSON: " . json_last_error_msg() . " (code: " . $jsonError . ")");
+            }
+            
+            // Ensuite vérifier que le résultat est un tableau/objet
             if ($data === null || !is_array($data)) {
                 throw new \Exception("Le JSON décodé doit être un tableau/objet, type reçu: " . gettype($data));
             }
+            
             $this->data = $data;
-            if ($this->data === null && json_last_error() !== JSON_ERROR_NONE) {
-                throw new \Exception("Erreur lors du parsing du JSON: " . json_last_error_msg());
-            }
-
-            if (!is_array($this->data)) {
-                throw new \Exception("Le JSON décodé doit être un tableau/objet, type reçu: " . gettype($this->data));
-            }
 
             return;
         }

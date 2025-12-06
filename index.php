@@ -9,7 +9,7 @@ use Vex6\Phppdf\Services\HtmlCleaner;
 
 // Configuration
 define('PROJECT_ROOT', __DIR__);
-define('EBOOK_JSON_PATH', PROJECT_ROOT . '/exports/ebook-1-676.json');
+define('EBOOK_JSON_PATH', PROJECT_ROOT . '/exports/ebook-1-719.json');
 
 echo "====================================\n";
 echo "  GÉNÉRATEUR DE PDF SMARTBOOK\n";
@@ -32,7 +32,7 @@ try {
     echo "[2/3] Génération du HTML de l'ebook (Pages: Couverture + Licence + TOC + Introduction)...\n";
     $ebookGenerator = new EbookGenerator(PROJECT_ROOT);
     $html = $ebookGenerator->generate($ebookData, time());
-    
+
     // Nettoyer le HTML en supprimant les pages vides
     echo "      - Nettoyage des pages vides...\n";
     $html = HtmlCleaner::removeEmptyPages($html);
@@ -66,7 +66,7 @@ try {
     echo "      (Cela peut prendre quelques secondes...)\n";
     $pdfGenerator = new PdfGenerator(PROJECT_ROOT);
     // Fonction pour nettoyer le nom de fichier (supprimer accents et caractères spéciaux)
-    $cleanTitle = function($text) {
+    $cleanTitle = function ($text) {
         // Supprimer les accents
         $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
         // Convertir en majuscules
@@ -76,8 +76,8 @@ try {
         // Supprimer les tirets en début/fin
         return trim($text, '-');
     };
-    
-    $pdfPath = $pdfGenerator->generateFromHtml($html, $coverData['id']."-".$cleanTitle($coverData['title']));
+
+    $pdfPath = $pdfGenerator->generateFromHtml($html, $coverData['id'] . "-" . $cleanTitle($coverData['title']));
     echo "      ✓ PDF généré avec succès\n\n";
 
     // Résultat

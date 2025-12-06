@@ -117,9 +117,14 @@ class GlossaryGenerator
         }
 
         // Sort alphabetically by acronym
-        usort($results, function($a, $b) {
+        usort($results, function ($a, $b) {
             return strcasecmp($a['acronym'], $b['acronym']);
         });
+
+        echo '<pre>';
+        echo "Nombre d'entrées de glossaire: " . count($results) . "\n";
+        print_r($results);
+        echo '</pre>';
 
         return empty($results) ? null : $results;
     }
@@ -144,14 +149,17 @@ class GlossaryGenerator
         $currentPageLength = 0;
         $currentPageNumber = 0;
 
-        // Capacité estimée par page (en caractères)
+        // Capacité estimée par page (en "unités de coût" et non juste caractères)
         // Page 1 a moins d'espace car elle contient le titre
-        $maxLengthPage1 = 3500;  // ~3500 caractères pour la première page
-        $maxLengthOtherPages = 4200;  // ~4500 caractères pour les autres pages
+        $maxLengthPage1 = 5000;
+        $maxLengthOtherPages = 5400;
 
-        // Marge de sécurité pour éviter les débordements (88% de la capacité max)
-        // Conservateur pour éviter les coupures d'entrées en bas de page
-        $safetyMargin = 0.88;
+        // Marge de sécurité (90%)
+        $safetyMargin = 0.90;
+
+        // Coût fixe par entrée pour prendre en compte le titre et les marges
+        // Cela "consomme" de la capacité verticale plus vite si on a plein de petites entrées
+        $entryOverhead = 200;
 
         foreach ($glossaryContent as $index => $entry) {
             // Utiliser ENT_NOQUOTES pour ne pas échapper l'apostrophe, puis échapper manuellement les guillemets doubles
@@ -159,9 +167,9 @@ class GlossaryGenerator
             $definition = str_replace('"', '&quot;', htmlspecialchars($entry['definition'] ?? '', ENT_NOQUOTES, 'UTF-8'));
             $detail = str_replace('"', '&quot;', htmlspecialchars($entry['detail'] ?? '', ENT_NOQUOTES, 'UTF-8'));
 
-
-            // Calculer la longueur estimée de cette entrée (acronym + definition + detail)
-            $entryLength = strlen($acronym) + strlen($definition) + strlen($detail);
+            // Calculer la longueur estimée (Coût Visuel = Texte + Overhead)
+            $textLength = strlen($acronym) + strlen($definition) + strlen($detail);
+            $entryLength = $textLength + $entryOverhead;
 
             // Déterminer la capacité maximale pour la page actuelle
             $maxLength = ($currentPageNumber === 0) ? $maxLengthPage1 : $maxLengthOtherPages;
@@ -243,7 +251,7 @@ class GlossaryGenerator
         return $html;
     }
 
-    
+
 
     /**
      * Wrap glossary page content with proper container
@@ -287,12 +295,12 @@ class GlossaryGenerator
         }
 
         // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map(function($acronym) {
+        $escapedAcronyms = array_map(function ($acronym) {
             return preg_quote($acronym, '/');
         }, array_keys($acronymAnchors));
         $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
 
-        return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, &$firstOccurrenceFound) {
             $spaceBefore = $match[1];
             $acronym = $match[2];
             $spaceAfter = $match[3];
@@ -313,7 +321,7 @@ class GlossaryGenerator
             // Créer le lien vers le glossaire (couleur bleue #0066CC)
             /*$link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
                     htmlspecialchars($acronym, ENT_QUOTES) . '</a>';*/
-                    $link = htmlspecialchars($acronym, ENT_QUOTES);
+            $link = htmlspecialchars($acronym, ENT_QUOTES);
             return $spaceBefore . $prefix . $link . $spaceAfter;
         }, $text);
     }
@@ -343,8 +351,8 @@ class GlossaryGenerator
 
         // Si première occurrence trouvée → lien retour cliquable
         if (isset($firstOccurrenceFound[$acronym])) {
-            $linkHtml = '<a href="' . htmlspecialchars($anchors['links']['back'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
-                       str_replace('"', '&quot;', htmlspecialchars($acronym . ' - ' . $definition, ENT_NOQUOTES, 'UTF-8')) . '</a>';
+            $linkHtml = '<a href="' . htmlspecialchars($anchors['links']['back'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                str_replace('"', '&quot;', htmlspecialchars($acronym . ' - ' . $definition, ENT_NOQUOTES, 'UTF-8')) . '</a>';
 
             return $anchorHtml . $linkHtml;
         } else {
