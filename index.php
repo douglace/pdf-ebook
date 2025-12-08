@@ -9,7 +9,7 @@ use Vex6\Phppdf\Services\HtmlCleaner;
 
 // Configuration
 define('PROJECT_ROOT', __DIR__);
-define('EBOOK_JSON_PATH', PROJECT_ROOT . '/exports/ebook-1-719.json');
+define('EBOOK_JSON_PATH', PROJECT_ROOT . '/exports/ebook-1-716.json');
 
 echo "====================================\n";
 echo "  GÉNÉRATEUR DE PDF SMARTBOOK\n";

@@ -162,10 +162,9 @@ class GlossaryGenerator
         $entryOverhead = 200;
 
         foreach ($glossaryContent as $index => $entry) {
-            // Utiliser ENT_NOQUOTES pour ne pas échapper l'apostrophe, puis échapper manuellement les guillemets doubles
-            $acronym = str_replace('"', '&quot;', htmlspecialchars($entry['acronym'] ?? '', ENT_NOQUOTES, 'UTF-8'));
-            $definition = str_replace('"', '&quot;', htmlspecialchars($entry['definition'] ?? '', ENT_NOQUOTES, 'UTF-8'));
-            $detail = str_replace('"', '&quot;', htmlspecialchars($entry['detail'] ?? '', ENT_NOQUOTES, 'UTF-8'));
+            $acronym = $entry['acronym'] ?? '';
+            $definition = $entry['definition'] ?? '';
+            $detail = $entry['detail'] ?? '';
 
             // Calculer la longueur estimée (Coût Visuel = Texte + Overhead)
             $textLength = strlen($acronym) + strlen($definition) + strlen($detail);
@@ -290,40 +289,66 @@ class GlossaryGenerator
      */
     private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
     {
+        // 1. D'abord sécuriser tout le texte avec la logique personnalisée (apostrophes non échappées)
+        // Cela évite les failles XSS sur le texte qui n'est pas un acronyme
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
         if (empty($acronymAnchors)) {
-            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+            return $safeText;
         }
 
-        // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map(function ($acronym) {
-            return preg_quote($acronym, '/');
-        }, array_keys($acronymAnchors));
-        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
+        // 2. Préparer les acronymes pour la recherche dans le texte DÉJÀ échappé
+        // Si un acronyme est "R&D", dans le texte échappé c'est "R&amp;D"
+        // On doit donc chercher "R&amp;D"
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
 
-        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            // Échapper l'acronyme exactement comme le texte
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+
+            // Mapper l'acronyme échappé vers l'original pour retrouver les ancres
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+
+            // Pour la regex, on doit échapper les caractères spéciaux de regex (. + * etc)
+            $escapedAcronymsPattern[] = preg_quote($escapedAcronym, '/');
+        }
+
+        // Créer le pattern regex pour tous les acronymes échappés
+        // Note: \b fonctionne bien avec &amp; car ; est un non-word char et la lettre suivante est un word char (ex: D)
+        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronymsPattern) . ')\\b)(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
             $spaceBefore = $match[1];
-            $acronym = $match[2];
+            $foundEscapedAcronym = $match[2]; // C'est la version safe (ex: R&amp;D)
             $spaceAfter = $match[3];
 
-            if (!isset($acronymAnchors[$acronym])) {
-                return htmlspecialchars($match[0], ENT_QUOTES, 'UTF-8');
+            // Retrouver l'acronyme original pour chercher les ancres
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
             }
 
-            $anchors = $acronymAnchors[$acronym];
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
             $prefix = '';
 
             // Première occurrence : ajouter l'ancre de retour
-            if (!isset($firstOccurrenceFound[$acronym])) {
-                $firstOccurrenceFound[$acronym] = true;
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
                 $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
             }
 
-            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            // Créer le lien. Le texte affiché DOIT être la version déjà échappée ($foundEscapedAcronym)
+            // car on insère dans du HTML, donc R&amp;D affichera R&D.
+            $link = $foundEscapedAcronym; // Pas besoin de re-échapper
+
+            // Le lien lui-même a besoin d'être simple
+            // Note: Si on voulait que l'acronyme soit un lien cliquable vers le glossaire, on décommenterait la ligne suivante
             /*$link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
-                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';*/
-            $link = htmlspecialchars($acronym, ENT_QUOTES);
+                    $foundEscapedAcronym . '</a>';*/
+
             return $spaceBefore . $prefix . $link . $spaceAfter;
-        }, $text);
+        }, $safeText);
     }
 
     /**
