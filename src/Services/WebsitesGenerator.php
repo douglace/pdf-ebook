@@ -56,7 +56,11 @@ class WebsitesGenerator
      * Générer le HTML des pages Sites Web
      * Retourne un tableau de pages HTML
      */
-    public function generateWebsitesHtml(?array $websitesContent, string $language = 'français'): array
+    /**
+     * Générer le HTML des pages Sites Web
+     * Retourne un tableau de pages HTML
+     */
+    public function generateWebsitesHtml(?array $websitesContent, string $language = 'français', array $acronymAnchors = [], array &$firstOccurrenceFound = []): array
     {
         if (empty($websitesContent)) {
             return [];
@@ -93,14 +97,14 @@ class WebsitesGenerator
             // Nom du site
             if (!empty($entry['name'])) {
                 $currentPageHtml .= '<h3 class="websites-entry-title">';
-                $currentPageHtml .= htmlspecialchars($entry['name'], ENT_QUOTES, 'UTF-8');
+                $currentPageHtml .= $this->injectGlossaryLinks($entry['name'], $acronymAnchors, $firstOccurrenceFound);
                 $currentPageHtml .= '</h3>';
             }
 
             // Description
             if (!empty($entry['description'])) {
                 $currentPageHtml .= '<p class="websites-description">';
-                $currentPageHtml .= htmlspecialchars($entry['description'], ENT_QUOTES, 'UTF-8');
+                $currentPageHtml .= $this->injectGlossaryLinks($entry['description'], $acronymAnchors, $firstOccurrenceFound);
                 $currentPageHtml .= '</p>';
             }
 
@@ -125,6 +129,59 @@ class WebsitesGenerator
         }
 
         return $pages;
+    }
+
+    private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
+    {
+        // 1. D'abord sécuriser tout le texte
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
+        if (empty($acronymAnchors)) {
+            return $safeText;
+        }
+
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
+
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
+            $spaceBefore = $match[1];
+            $foundEscapedAcronym = $match[2];
+            $spaceAfter = $match[3];
+
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
+            }
+
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
+            $prefix = '';
+
+            // Première occurrence : ajouter l'ancre de retour
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
+                $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
+            }
+
+            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                $foundEscapedAcronym . '</a>';
+
+            return $spaceBefore . $prefix . $link . $spaceAfter;
+        }, $safeText);
     }
 
     /**

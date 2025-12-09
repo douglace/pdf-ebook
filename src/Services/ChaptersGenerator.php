@@ -72,7 +72,7 @@ class ChaptersGenerator
                 // Commencer un nouveau chapitre
                 $chapterCounter++;
                 $currentChapter = [
-                    'numero' => (string)$chapterCounter,
+                    'numero' => (string) $chapterCounter,
                     'title' => trim($matches[1]),
                     'subchapters' => []
                 ];
@@ -108,7 +108,7 @@ class ChaptersGenerator
                     $subchapterTitle = trim($subMatches[2]);
                 } else {
                     // Si pas de numéro explicite, utiliser l'index
-                    $numeroSubchapter = (string)(count($currentChapter['subchapters']) + 1);
+                    $numeroSubchapter = (string) (count($currentChapter['subchapters']) + 1);
                 }
 
                 $currentSubchapter = [
@@ -255,7 +255,7 @@ class ChaptersGenerator
             foreach ($chapter['subchapters'] as $subchapter) {
                 $subchapterNumber = $subchapter['numero'];
                 $subchapterTitle = htmlspecialchars($subchapter['title'], ENT_QUOTES, 'UTF-8');
-                
+
 
 
                 // PROTECTION ANTI-ORPHELIN POUR SOUS-TITRE (H2)
@@ -344,7 +344,7 @@ class ChaptersGenerator
                     $currentPageHeight += $paragraphHeight;
                 }
             }
-            
+
             // Incrémenter le compteur pour le prochain chapitre
             $chapterCounter++;
         }
@@ -404,39 +404,56 @@ class ChaptersGenerator
      */
     private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
     {
+        // 1. D'abord sécuriser tout le texte avec la logique personnalisée (apostrophes non échappées)
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
         if (empty($acronymAnchors)) {
-            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+            return $safeText;
         }
 
-        // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map(function($acronym) {
-            return preg_quote($acronym, '/');
-        }, array_keys($acronymAnchors));
-        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
 
-        return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            // Gestion intelligente des frontières de mot
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
             $spaceBefore = $match[1];
-            $acronym = $match[2];
+            $foundEscapedAcronym = $match[2];
             $spaceAfter = $match[3];
 
-            if (!isset($acronymAnchors[$acronym])) {
-                return htmlspecialchars($match[0], ENT_QUOTES, 'UTF-8');
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
             }
 
-            $anchors = $acronymAnchors[$acronym];
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
             $prefix = '';
 
             // Première occurrence : ajouter l'ancre de retour
-            if (!isset($firstOccurrenceFound[$acronym])) {
-                $firstOccurrenceFound[$acronym] = true;
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
                 $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
             }
 
-            // Créer le lien vers le glossaire (couleur bleue #0066CC)
-            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
-                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';
+            // Créer le lien vers le glossaire
+            // Note: foundEscapedAcronym est déjà safe pour l'affichage HTML
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                $foundEscapedAcronym . '</a>';
 
             return $spaceBefore . $prefix . $link . $spaceAfter;
-        }, $text);
+        }, $safeText);
     }
 }

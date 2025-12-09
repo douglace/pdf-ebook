@@ -41,7 +41,7 @@ class SuggestionsGenerator
 
         return empty($results) ? null : $results;
     }
-    
+
     /**
      * Generate HTML for suggestions pages
      * 
@@ -49,7 +49,14 @@ class SuggestionsGenerator
      * @param string $language
      * @return array Array of HTML strings for each page
      */
-    public function generateSuggestionsHtml(?array $suggestionsContent, string $language): array
+    /**
+     * Generate HTML for suggestions pages
+     * 
+     * @param array|null $suggestionsContent
+     * @param string $language
+     * @return array Array of HTML strings for each page
+     */
+    public function generateSuggestionsHtml(?array $suggestionsContent, string $language, array $acronymAnchors = [], array &$firstOccurrenceFound = []): array
     {
         if ($suggestionsContent === null || empty($suggestionsContent)) {
             return ['', '', ''];
@@ -69,8 +76,8 @@ class SuggestionsGenerator
         $safetyMargin = 0.85;
 
         foreach ($suggestionsContent as $index => $suggestion) {
-            $title = htmlspecialchars($suggestion['title'] ?? '', ENT_QUOTES, 'UTF-8');
-            $description = htmlspecialchars($suggestion['description'] ?? '', ENT_QUOTES, 'UTF-8');
+            $title = $suggestion['title'] ?? '';
+            $description = $suggestion['description'] ?? '';
 
             // Calculer la longueur estimée de cette entrée
             $entryLength = strlen($title) + strlen($description);
@@ -98,11 +105,11 @@ class SuggestionsGenerator
             $entryHtml = '<div class="suggestions-entry">';
 
             if (!empty($title)) {
-                $entryHtml .= '<h3 class="suggestions-entry-title">' . $title . '</h3>';
+                $entryHtml .= '<h3 class="suggestions-entry-title">' . $this->injectGlossaryLinks($title, $acronymAnchors, $firstOccurrenceFound) . '</h3>';
             }
 
             if (!empty($description)) {
-                $entryHtml .= '<p class="suggestions-description">' . $description . '</p>';
+                $entryHtml .= '<p class="suggestions-description">' . $this->injectGlossaryLinks($description, $acronymAnchors, $firstOccurrenceFound) . '</p>';
             }
 
             $entryHtml .= '</div>';
@@ -124,7 +131,60 @@ class SuggestionsGenerator
 
         return array_slice($pages, 0, 3);
     }
-    
+
+    private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
+    {
+        // 1. D'abord sécuriser tout le texte
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
+        if (empty($acronymAnchors)) {
+            return $safeText;
+        }
+
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
+
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
+            $spaceBefore = $match[1];
+            $foundEscapedAcronym = $match[2];
+            $spaceAfter = $match[3];
+
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
+            }
+
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
+            $prefix = '';
+
+            // Première occurrence : ajouter l'ancre de retour
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
+                $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
+            }
+
+            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                $foundEscapedAcronym . '</a>';
+
+            return $spaceBefore . $prefix . $link . $spaceAfter;
+        }, $safeText);
+    }
+
     /**
      * Generate title HTML for the first suggestions page
      *
@@ -162,7 +222,7 @@ class SuggestionsGenerator
 
         return '<div class="suggestions-container page-container">' . $content . '</div>';
     }
-    
+
     /**
      * Check if suggestions content exists
      * 

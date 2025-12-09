@@ -87,14 +87,14 @@ class QuizGenerator
 
             // Trier les choix par numero_answer pour avoir l'ordre correct
             $choices = $questionData['choices'];
-            usort($choices, function($a, $b) {
+            usort($choices, function ($a, $b) {
                 return intval($a['numero_answer']) - intval($b['numero_answer']);
             });
 
             // Convertir les choix en réponses avec lettres
             $letters = ['a', 'b', 'c', 'd'];
             $letterIndex = 0;
-            
+
             foreach ($choices as $choice) {
                 if ($letterIndex < count($letters)) {
                     $question['answers'][] = [
@@ -117,7 +117,11 @@ class QuizGenerator
      * Générer le HTML des pages de quiz
      * Retourne un tableau de pages HTML
      */
-    public function generateQuizHtml(?array $quizContent): array
+    /**
+     * Générer le HTML des pages de quiz
+     * Retourne un tableau de pages HTML
+     */
+    public function generateQuizHtml(?array $quizContent, array $acronymAnchors = [], array &$firstOccurrenceFound = []): array
     {
         if (empty($quizContent) || empty($quizContent['questions'])) {
             return [];
@@ -156,7 +160,7 @@ class QuizGenerator
 
             // Construire le HTML complet de la question avec TOUTES ses réponses
             $questionHtml = '<div class="quiz-question">';
-            $questionHtml .= '<p class="quiz-question-text"><strong>' . $questionNumber . '. ' . htmlspecialchars($question['question'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
+            $questionHtml .= '<p class="quiz-question-text"><strong>' . $questionNumber . '. ' . $this->injectGlossaryLinks($question['question'], $acronymAnchors, $firstOccurrenceFound) . '</strong></p>';
 
             // Ajouter TOUTES les réponses
             if (!empty($question['answers'])) {
@@ -166,7 +170,7 @@ class QuizGenerator
                     $questionHtml .= '<span class="answer-letter">' . htmlspecialchars($answer['letter'], ENT_QUOTES, 'UTF-8') . '</span> – ';
                     // Nettoyer et corriger l'encodage du texte
                     $cleanText = $this->cleanTextEncoding($answer['text']);
-                    $questionHtml .= $cleanText;
+                    $questionHtml .= $this->injectGlossaryLinks($cleanText, $acronymAnchors, $firstOccurrenceFound);
                     $questionHtml .= '</p>';
                 }
                 $questionHtml .= '</div>';
@@ -195,6 +199,59 @@ class QuizGenerator
         return $pages;
     }
 
+    private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
+    {
+        // 1. D'abord sécuriser tout le texte
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
+        if (empty($acronymAnchors)) {
+            return $safeText;
+        }
+
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
+
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
+            $spaceBefore = $match[1];
+            $foundEscapedAcronym = $match[2];
+            $spaceAfter = $match[3];
+
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
+            }
+
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
+            $prefix = '';
+
+            // Première occurrence : ajouter l'ancre de retour
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
+                $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
+            }
+
+            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                $foundEscapedAcronym . '</a>';
+
+            return $spaceBefore . $prefix . $link . $spaceAfter;
+        }, $safeText);
+    }
+
     /**
      * Envelopper le contenu dans un conteneur de page
      */
@@ -216,7 +273,7 @@ class QuizGenerator
      * Générer les pages de réponses du quiz
      * Retourne un tableau de pages HTML avec les réponses et explications
      */
-    public function generateQuizAnswersHtml(?array $quizContent, string $language = 'français'): array
+    public function generateQuizAnswersHtml(?array $quizContent, string $language = 'français', array $acronymAnchors = [], array &$firstOccurrenceFound = []): array
     {
         if (empty($quizContent) || empty($quizContent['questions'])) {
             return [];
@@ -258,20 +315,20 @@ class QuizGenerator
 
                 // Construire le HTML complet de cette entrée (question + réponse + explication)
                 $answerHtml = '<div class="quiz-answer-entry">';
-                $answerHtml .= '<p class="quiz-answer-question"><strong>' . $questionNumber . '. ' . htmlspecialchars($question['question'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
+                $answerHtml .= '<p class="quiz-answer-question"><strong>' . $questionNumber . '. ' . $this->injectGlossaryLinks($question['question'], $acronymAnchors, $firstOccurrenceFound) . '</strong></p>';
 
                 $answerHtml .= '<p class="quiz-answer-correct">';
                 $answerLabel = $this->getAnswerLabel($language);
                 $answerHtml .= '<strong>' . htmlspecialchars($answerLabel, ENT_QUOTES, 'UTF-8') . '</strong> ';
                 $answerHtml .= '<span class="answer-letter">' . htmlspecialchars(strtoupper($correctAnswer['letter']), ENT_QUOTES, 'UTF-8') . '</span> – ';
-                $answerHtml .= htmlspecialchars($correctAnswer['text'], ENT_QUOTES, 'UTF-8');
+                $answerHtml .= $this->injectGlossaryLinks($correctAnswer['text'], $acronymAnchors, $firstOccurrenceFound);
                 $answerHtml .= '</p>';
 
                 if (!empty($correctAnswer['explanation'])) {
                     $answerHtml .= '<p class="quiz-answer-explanation">';
                     $explanationLabel = $this->getExplanationLabel($language);
                     $answerHtml .= '<strong>' . htmlspecialchars($explanationLabel, ENT_QUOTES, 'UTF-8') . '</strong> ';
-                    $answerHtml .= htmlspecialchars($correctAnswer['explanation'], ENT_QUOTES, 'UTF-8');
+                    $answerHtml .= $this->injectGlossaryLinks($correctAnswer['explanation'], $acronymAnchors, $firstOccurrenceFound);
                     $answerHtml .= '</p>';
                 }
 
@@ -346,15 +403,15 @@ class QuizGenerator
     {
         // Hauteur totale de la page
         $totalHeight = self::PAGE_HEIGHT_PX;
-        
+
         // Moins la marge du haut du conteneur
         $availableHeight = $totalHeight - self::CONTAINER_TOP_PX;
-        
+
         // Moins la hauteur du titre si c'est la première page
         if ($pageNumber === 0) {
             $availableHeight -= self::TITLE_HEIGHT_PX;
         }
-        
+
         return $availableHeight;
     }
 
@@ -367,13 +424,13 @@ class QuizGenerator
     private function estimateQuestionHeight(array $question): int
     {
         $height = 0;
-        
+
         // Hauteur de la question elle-même
         $questionText = $question['question'];
         $questionLines = $this->calculateTextLines($questionText, self::QUESTION_FONT_SIZE_PX, self::CONTAINER_WIDTH_PX);
         $height += $questionLines * (self::QUESTION_FONT_SIZE_PX * self::QUESTION_LINE_HEIGHT);
         $height += self::QUESTION_TEXT_MARGIN_BOTTOM_PX; // Marge après le texte de la question
-        
+
         // Hauteur de chaque réponse
         if (!empty($question['answers'])) {
             foreach ($question['answers'] as $answer) {
@@ -384,10 +441,10 @@ class QuizGenerator
                 $height += self::ANSWER_MARGIN_BOTTOM_PX; // Marge après chaque réponse
             }
         }
-        
+
         // Marge après la question complète
         $height += self::QUESTION_MARGIN_BOTTOM_PX;
-        
+
         return intval($height);
     }
 
@@ -402,20 +459,20 @@ class QuizGenerator
     private function estimateAnswerEntryHeight(array $question, array $correctAnswer, string $language): int
     {
         $height = 0;
-        
+
         // Hauteur de la question
         $questionText = $question['question'];
         $questionLines = $this->calculateTextLines($questionText, self::QUESTION_FONT_SIZE_PX, self::CONTAINER_WIDTH_PX);
         $height += $questionLines * (self::QUESTION_FONT_SIZE_PX * self::QUESTION_LINE_HEIGHT);
         $height += self::ANSWER_QUESTION_MARGIN_BOTTOM_PX;
-        
+
         // Hauteur de la réponse correcte
         $answerLabel = $this->getAnswerLabel($language);
         $answerText = $answerLabel . ' ' . strtoupper($correctAnswer['letter']) . ' – ' . $correctAnswer['text'];
         $answerLines = $this->calculateTextLines($answerText, self::QUESTION_FONT_SIZE_PX, self::CONTAINER_WIDTH_PX);
         $height += $answerLines * (self::QUESTION_FONT_SIZE_PX * self::QUESTION_LINE_HEIGHT);
         $height += self::ANSWER_CORRECT_MARGIN_BOTTOM_PX;
-        
+
         // Hauteur de l'explication si présente
         if (!empty($correctAnswer['explanation'])) {
             $explanationLabel = $this->getExplanationLabel($language);
@@ -424,11 +481,11 @@ class QuizGenerator
             $height += $explanationLines * (self::QUESTION_FONT_SIZE_PX * self::QUESTION_LINE_HEIGHT);
             $height += self::ANSWER_EXPLANATION_MARGIN_BOTTOM_PX;
         }
-        
+
         // Marge après l'entrée complète (réduite pour permettre un meilleur remplissage)
         // On utilise seulement la moitié de la marge pour l'estimation, car la dernière entrée n'a pas besoin de toute la marge
         $height += intval(self::ANSWER_ENTRY_MARGIN_BOTTOM_PX * 0.7);
-        
+
         return intval($height);
     }
 
@@ -446,14 +503,14 @@ class QuizGenerator
         // (basé sur une police moyenne de 12px)
         // Ajustement selon la taille de police
         $charsPerLine = intval($containerWidth / ($fontSize * 0.6));
-        
+
         if ($charsPerLine <= 0) {
             $charsPerLine = 50; // Valeur par défaut
         }
-        
+
         $textLength = mb_strlen($text);
         $lines = max(1, intval(ceil($textLength / $charsPerLine)));
-        
+
         return $lines;
     }
 
@@ -464,20 +521,20 @@ class QuizGenerator
     {
         // Supprimer les caractères de remplacement UTF-8 ()
         $text = str_replace('', '', $text);
-        
+
         // Supprimer seulement les caractères de contrôle vraiment problématiques
         // (pas les caractères UTF-8 valides dans la plage 80-9F)
         $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $text);
-        
+
         // Supprimer les caractères Unicode problématiques
         $text = preg_replace('/[\x{FFFD}]/u', '', $text);
-        
+
         // Nettoyer les espaces
         $text = trim($text);
-        
+
         // Échapper les caractères HTML dangereux
         $text = str_replace(['<', '>', '&'], ['&lt;', '&gt;', '&amp;'], $text);
-        
+
         return $text;
     }
 }

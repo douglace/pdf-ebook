@@ -298,8 +298,6 @@ class GlossaryGenerator
         }
 
         // 2. Préparer les acronymes pour la recherche dans le texte DÉJÀ échappé
-        // Si un acronyme est "R&D", dans le texte échappé c'est "R&amp;D"
-        // On doit donc chercher "R&amp;D"
         $escapedAcronymsMap = [];
         $escapedAcronymsPattern = [];
 
@@ -310,20 +308,26 @@ class GlossaryGenerator
             // Mapper l'acronyme échappé vers l'original pour retrouver les ancres
             $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
 
-            // Pour la regex, on doit échapper les caractères spéciaux de regex (. + * etc)
-            $escapedAcronymsPattern[] = preg_quote($escapedAcronym, '/');
+            // Pour la regex, on doit échapper les caractères spéciaux de regex
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            // Gestion intelligente des frontières de mot (\b)
+            // Si le raw acronym commence par word char -> start boundary \b
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            // Si le raw acronym finit par word char -> end boundary \b
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
         }
 
-        // Créer le pattern regex pour tous les acronymes échappés
-        // Note: \b fonctionne bien avec &amp; car ; est un non-word char et la lettre suivante est un word char (ex: D)
-        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronymsPattern) . ')\\b)(\\s*)/u';
+        // Créer le pattern regex
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
 
         return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
             $spaceBefore = $match[1];
-            $foundEscapedAcronym = $match[2]; // C'est la version safe (ex: R&amp;D)
+            $foundEscapedAcronym = $match[2];
             $spaceAfter = $match[3];
 
-            // Retrouver l'acronyme original pour chercher les ancres
             if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
                 return $match[0];
             }
@@ -338,14 +342,10 @@ class GlossaryGenerator
                 $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
             }
 
-            // Créer le lien. Le texte affiché DOIT être la version déjà échappée ($foundEscapedAcronym)
-            // car on insère dans du HTML, donc R&amp;D affichera R&D.
-            $link = $foundEscapedAcronym; // Pas besoin de re-échapper
-
-            // Le lien lui-même a besoin d'être simple
-            // Note: Si on voulait que l'acronyme soit un lien cliquable vers le glossaire, on décommenterait la ligne suivante
+            // Créer le lien.
             /*$link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
                     $foundEscapedAcronym . '</a>';*/
+            $link = $foundEscapedAcronym;
 
             return $spaceBefore . $prefix . $link . $spaceAfter;
         }, $safeText);
@@ -353,11 +353,6 @@ class GlossaryGenerator
 
     /**
      * Créer une entrée de glossaire avec les liens retour
-     *
-     * @param string $text Texte de l'entrée de glossaire
-     * @param array $acronymAnchors Structure des ancres
-     * @param array $firstOccurrenceFound Premières occurrences trouvées
-     * @return string Texte modifié avec les liens retour
      */
     private function createGlossaryEntryWithLinks(string $text, array $acronymAnchors, array $firstOccurrenceFound): string
     {

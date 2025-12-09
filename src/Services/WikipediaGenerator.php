@@ -44,7 +44,7 @@ class WikipediaGenerator
         if ($wikiStartPos === false) {
             return null;
         }
-        
+
 
         // Trouver la fin de la section WIKIPEDIA (prochain [TITRE1] ou fin du texte)
         $wikiSection = substr($formattedText, $wikiStartPos);
@@ -53,11 +53,11 @@ class WikipediaGenerator
             $wikiSection = substr($wikiSection, 0, $nextTitre1Pos);
         }
 
-        
+
 
         // Split par ENTREE_BIBLIOGRAPHIE pour isoler chaque entrée
         $parts = preg_split('/\[ENTREE_BIBLIOGRAPHIE\]\s*/i', $wikiSection);
-        
+
         foreach ($parts as $part) {
             if (empty(trim($part))) {
                 continue;
@@ -77,7 +77,7 @@ class WikipediaGenerator
 
             $title = $firstLine;
 
-            
+
 
             // Trouver la fin de l'entrée (prochain marqueur important)
             $endPos = min(
@@ -127,7 +127,11 @@ class WikipediaGenerator
      * Générer le HTML des pages Wikipedia
      * Retourne un tableau de pages HTML
      */
-    public function generateWikipediaHtml(?array $wikipediaContent, string $language = 'français'): array
+    /**
+     * Générer le HTML des pages Wikipedia
+     * Retourne un tableau de pages HTML
+     */
+    public function generateWikipediaHtml(?array $wikipediaContent, string $language = 'français', array $acronymAnchors = [], array &$firstOccurrenceFound = []): array
     {
         if (empty($wikipediaContent)) {
             return [];
@@ -196,7 +200,7 @@ class WikipediaGenerator
             $dynamicSafety = $entryHeight < 80 ? 5 : $entryBottomSafety; // Marge réduite pour petites entrées
             $totalHeightNeeded = $currentPageHeight + $titleHeightToAdd + $entryHeight + $dynamicSafety;
             $pageWasCreated = false;
-            
+
             // Créer une nouvelle page si nécessaire (sauf pour la toute première entrée qui doit toujours être ajoutée)
             // On permet un léger dépassement (5px) pour mieux remplir les pages
             if ($totalHeightNeeded > ($maxPageHeight + 5) && ($index > 0 || !empty($currentPageHtml))) {
@@ -221,14 +225,14 @@ class WikipediaGenerator
             // Titre de l'entrée
             if (!empty($entry['title'])) {
                 $currentPageHtml .= '<h3 class="wikipedia-entry-title">';
-                $currentPageHtml .= htmlspecialchars($entry['title'], ENT_QUOTES, 'UTF-8');
+                $currentPageHtml .= $this->injectGlossaryLinks($entry['title'], $acronymAnchors, $firstOccurrenceFound);
                 $currentPageHtml .= '</h3>';
             }
 
             // Description
             if (!empty($entry['description'])) {
                 $currentPageHtml .= '<p class="wikipedia-description">';
-                $currentPageHtml .= htmlspecialchars($entry['description'], ENT_QUOTES, 'UTF-8');
+                $currentPageHtml .= $this->injectGlossaryLinks($entry['description'], $acronymAnchors, $firstOccurrenceFound);
                 $currentPageHtml .= '</p>';
             }
 
@@ -253,6 +257,59 @@ class WikipediaGenerator
 
 
         return $pages;
+    }
+
+    private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
+    {
+        // 1. D'abord sécuriser tout le texte
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
+        if (empty($acronymAnchors)) {
+            return $safeText;
+        }
+
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
+
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
+            $spaceBefore = $match[1];
+            $foundEscapedAcronym = $match[2];
+            $spaceAfter = $match[3];
+
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
+            }
+
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
+            $prefix = '';
+
+            // Première occurrence : ajouter l'ancre de retour
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
+                $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
+            }
+
+            // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                $foundEscapedAcronym . '</a>';
+
+            return $spaceBefore . $prefix . $link . $spaceAfter;
+        }, $safeText);
     }
 
     /**

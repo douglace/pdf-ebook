@@ -85,7 +85,7 @@ class EbookGenerator
         $rawData = $ebookData->getRawData();
         $zones = $this->parseZones($rawData['formatted_text'] ?? '');
         $acronyms = $this->glossaryLinkManager->identifyAcronyms($zones);
-        
+
         // Créer les ancres de liens (simulation pour HTML - pas de TCPDF ici)
         $acronymAnchors = [];
         $usedSlugs = [];
@@ -128,7 +128,7 @@ class EbookGenerator
 
         // Générer le quiz
         $quizContent = $this->quizGenerator->extractQuizContent($ebookData);
-        $quizPages = $this->quizGenerator->generateQuizHtml($quizContent);
+        $quizPages = $this->quizGenerator->generateQuizHtml($quizContent, $acronymAnchors, $firstOccurrenceFound);
         $quizTitleHtml = $this->quizGenerator->generateQuizTitleHtml();
 
         // Construire le HTML des pages de quiz
@@ -143,7 +143,7 @@ class EbookGenerator
         }
 
         // Générer les pages de réponses du quiz
-        $quizAnswersPages = $this->quizGenerator->generateQuizAnswersHtml($quizContent, $language);
+        $quizAnswersPages = $this->quizGenerator->generateQuizAnswersHtml($quizContent, $language, $acronymAnchors, $firstOccurrenceFound);
 
         // Construire le HTML des pages de réponses
         $quizAnswersPage1Html = '';
@@ -158,7 +158,7 @@ class EbookGenerator
 
         // Générer Wikipedia
         $wikipediaContent = $this->wikipediaGenerator->extractWikipediaContent($ebookData);
-        $wikipediaPages = $this->wikipediaGenerator->generateWikipediaHtml($wikipediaContent, $language);
+        $wikipediaPages = $this->wikipediaGenerator->generateWikipediaHtml($wikipediaContent, $language, $acronymAnchors, $firstOccurrenceFound);
         $wikipediaTitleHtml = $this->wikipediaGenerator->generateWikipediaTitleHtml();
 
         // Construire le HTML des pages de Wikipedia
@@ -175,7 +175,7 @@ class EbookGenerator
         // Générer Sites Web
         $this->websitesGenerator->setLanguage($language);
         $websitesContent = $this->websitesGenerator->extractWebsitesContent($ebookData);
-        $websitesPages = $this->websitesGenerator->generateWebsitesHtml($websitesContent, $language);
+        $websitesPages = $this->websitesGenerator->generateWebsitesHtml($websitesContent, $language, $acronymAnchors, $firstOccurrenceFound);
         $websitesTitleHtml = $this->websitesGenerator->generateWebsitesTitleHtml();
 
         // Construire le HTML des pages de Sites Web
@@ -210,7 +210,7 @@ class EbookGenerator
 
         // Générer Suggestions
         $suggestionsContent = $this->suggestionsGenerator->extractSuggestionsContent($ebookData);
-        $suggestionsPages = $this->suggestionsGenerator->generateSuggestionsHtml($suggestionsContent, $language);
+        $suggestionsPages = $this->suggestionsGenerator->generateSuggestionsHtml($suggestionsContent, $language, $acronymAnchors, $firstOccurrenceFound);
         $suggestionsTitleHtml = $this->suggestionsGenerator->generateSuggestionsTitleHtml($language);
 
         // Construire le HTML des pages de Suggestions

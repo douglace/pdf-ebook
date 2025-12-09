@@ -29,7 +29,7 @@ class GlossaryLinkManager
                 // Format attendu : "ACRONYME - Définition complète"
                 $parts = explode(' - ', $entry['text'], 2);
                 $acronym = trim($parts[0]);
-                
+
                 if (!empty($acronym)) {
                     $acronyms[] = $acronym;
                 }
@@ -90,31 +90,46 @@ class GlossaryLinkManager
      */
     public function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
     {
+        // 1. D'abord sécuriser tout le texte
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
         if (empty($acronymAnchors)) {
-            return $text;
+            return $safeText;
         }
 
-        // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map(function($acronym) {
-            return preg_quote($acronym, '/');
-        }, array_keys($acronymAnchors));
-        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
 
-        return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
             $spaceBefore = $match[1];
-            $acronym = $match[2];
+            $foundEscapedAcronym = $match[2];
             $spaceAfter = $match[3];
 
-            if (!isset($acronymAnchors[$acronym])) {
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
                 return $match[0];
             }
 
-            $anchors = $acronymAnchors[$acronym];
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
             $prefix = '';
 
             // Première occurrence : ajouter l'ancre de retour
-            if (!isset($firstOccurrenceFound[$acronym])) {
-                $firstOccurrenceFound[$acronym] = true;
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
                 $prefix = sprintf(
                     '{{EAIEG_SET_DEST:%d}}{{EAIEG_HTML:<a name="%s" id="%s"></a>}}',
                     $anchors['links']['back'],
@@ -124,14 +139,15 @@ class GlossaryLinkManager
             }
 
             // Créer le lien vers le glossaire (couleur bleue #0066CC)
+            // foundEscapedAcronym est déjà safe
             $link = sprintf(
                 '{{EAIEG_LINK:%d:%s:0066CC}}',
                 $anchors['links']['gloss'],
-                htmlspecialchars($acronym, ENT_QUOTES)
+                $foundEscapedAcronym
             );
 
             return $spaceBefore . $prefix . $link . $spaceAfter;
-        }, $text);
+        }, $safeText);
     }
 
     /**
@@ -188,7 +204,7 @@ class GlossaryLinkManager
     public function shouldInjectLinks(string $tag, bool $inGlossaryParagraph): bool
     {
         return ($tag !== 'ENTREE_GLOSSAIRE') &&
-               !($tag === 'NORMAL' && $inGlossaryParagraph);
+            !($tag === 'NORMAL' && $inGlossaryParagraph);
     }
 
     /**

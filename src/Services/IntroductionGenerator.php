@@ -28,7 +28,7 @@ class IntroductionGenerator
 
         foreach ($lines as $line) {
             $line = trim($line);
-            
+
             // Détecter le début de l'introduction
             // Très strict : le titre doit COMMENCER par "INTRODUCTION -" ou "INTRODUCTION:"
             // Exemples: "INTRODUCTION - Titre" (valide), "INTRODUCTION À LA..." (chapitre normal)
@@ -111,41 +111,64 @@ class IntroductionGenerator
      * @param array $firstOccurrenceFound Référence pour tracker les premières occurrences
      * @return string Texte modifié avec les liens HTML
      */
+    /**
+     * Injecter automatiquement les liens vers les acronymes dans le texte
+     *
+     * @param string $text Texte à modifier
+     * @param array $acronymAnchors Structure des ancres
+     * @param array $firstOccurrenceFound Référence pour tracker les premières occurrences
+     * @return string Texte modifié avec les liens HTML
+     */
     private function injectGlossaryLinks(string $text, array $acronymAnchors, array &$firstOccurrenceFound): string
     {
+        // 1. D'abord sécuriser tout le texte
+        $safeText = str_replace('"', '&quot;', htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8'));
+
         if (empty($acronymAnchors)) {
-            return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+            return $safeText;
         }
 
-        // Créer le pattern regex pour tous les acronymes
-        $escapedAcronyms = array_map(function($acronym) {
-            return preg_quote($acronym, '/');
-        }, array_keys($acronymAnchors));
-        $pattern = '/(\\s*)(\\b(?:' . implode('|', $escapedAcronyms) . ')\\b)(\\s*)/u';
+        // 2. Préparer les acronymes pour la recherche
+        $escapedAcronymsMap = [];
+        $escapedAcronymsPattern = [];
 
-        return preg_replace_callback($pattern, function($match) use ($acronymAnchors, &$firstOccurrenceFound) {
+        foreach ($acronymAnchors as $rawAcronym => $anchors) {
+            $escapedAcronym = str_replace('"', '&quot;', htmlspecialchars($rawAcronym, ENT_NOQUOTES, 'UTF-8'));
+            $escapedAcronymsMap[$escapedAcronym] = $rawAcronym;
+            $escapedForRegex = preg_quote($escapedAcronym, '/');
+
+            $startBoundary = preg_match('/^\w/u', $rawAcronym) ? '\\b' : '';
+            $endBoundary = preg_match('/\w$/u', $rawAcronym) ? '\\b' : '';
+
+            $escapedAcronymsPattern[] = $startBoundary . $escapedForRegex . $endBoundary;
+        }
+
+        $pattern = '/(\\s*)(' . implode('|', $escapedAcronymsPattern) . ')(\\s*)/u';
+
+        return preg_replace_callback($pattern, function ($match) use ($acronymAnchors, $escapedAcronymsMap, &$firstOccurrenceFound) {
             $spaceBefore = $match[1];
-            $acronym = $match[2];
+            $foundEscapedAcronym = $match[2];
             $spaceAfter = $match[3];
 
-            if (!isset($acronymAnchors[$acronym])) {
-                return htmlspecialchars($match[0], ENT_QUOTES, 'UTF-8');
+            if (!isset($escapedAcronymsMap[$foundEscapedAcronym])) {
+                return $match[0];
             }
 
-            $anchors = $acronymAnchors[$acronym];
+            $rawAcronym = $escapedAcronymsMap[$foundEscapedAcronym];
+            $anchors = $acronymAnchors[$rawAcronym];
             $prefix = '';
 
             // Première occurrence : ajouter l'ancre de retour
-            if (!isset($firstOccurrenceFound[$acronym])) {
-                $firstOccurrenceFound[$acronym] = true;
+            if (!isset($firstOccurrenceFound[$rawAcronym])) {
+                $firstOccurrenceFound[$rawAcronym] = true;
                 $prefix = '<a id="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '" name="' . htmlspecialchars($anchors['back'], ENT_QUOTES) . '"></a>';
             }
 
             // Créer le lien vers le glossaire (couleur bleue #0066CC)
-            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' . 
-                    htmlspecialchars($acronym, ENT_QUOTES) . '</a>';
+            $link = '<a href="' . htmlspecialchars($anchors['links']['gloss'], ENT_QUOTES) . '" style="color: #0066CC; text-decoration: underline;">' .
+                $foundEscapedAcronym . '</a>';
 
             return $spaceBefore . $prefix . $link . $spaceAfter;
-        }, $text);
+        }, $safeText);
     }
 }
